@@ -5,10 +5,10 @@ from keras.optimizers import Adam
 from collections import deque
 import time
 import numpy as np
-import os 
+import os
 import cv2
 from PIL import Image
-from tqdm import tqdm 
+from tqdm import tqdm
 import tensorflow as tf
 import random
 
@@ -33,21 +33,6 @@ MIN_EPSILON = 0.001
 #  Stats settings
 AGGREGATE_STATS_EVERY = 50  # episodes
 SHOW_PREVIEW = False
-
-# For stats
-ep_rewards = [-200]
-
-# For more repetitive results
-random.seed(1)
-np.random.seed(1)
-tf.set_random_seed(1)
-
-# Memory fraction, used mostly when trai8ning multiple agents
-# gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
-# backend.set_session(tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)))
-
-
-
 
 
 class Blob:
@@ -199,14 +184,25 @@ class BlobEnv:
         return img
 
 
-
 env = BlobEnv()
+
+
+# For stats
+ep_rewards = [-200]
+
+# For more repetitive results
+random.seed(1)
+np.random.seed(1)
+tf.set_random_seed(1)
+
+# Memory fraction, used mostly when trai8ning multiple agents
+# gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
+# backend.set_session(tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)))
 
 
 # Create models folder
 if not os.path.isdir('models'):
     os.makedirs('models')
-
 
 
 class ModifiedTensorBoard(TensorBoard):
@@ -241,7 +237,6 @@ class ModifiedTensorBoard(TensorBoard):
         self._write_logs(stats, self.step)
 
 
-
 # Agent class
 class DQNAgent:
     def __init__(self):
@@ -257,7 +252,8 @@ class DQNAgent:
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
         # Custom tensorboard object
-        self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
+        self.tensorboard = ModifiedTensorBoard(
+            log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
 
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
@@ -265,7 +261,8 @@ class DQNAgent:
     def create_model(self):
         model = Sequential()
 
-        model.add(Conv2D(256, (3, 3), input_shape=env.OBSERVATION_SPACE_VALUES))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        model.add(Conv2D(256, (3, 3), input_shape=env.OBSERVATION_SPACE_VALUES))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.2))
@@ -275,11 +272,14 @@ class DQNAgent:
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.2))
 
-        model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
+        # this converts our 3D feature maps to 1D feature vectors
+        model.add(Flatten())
         model.add(Dense(64))
 
-        model.add(Dense(env.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
-        model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
+        # ACTION_SPACE_SIZE = how many choices (9)
+        model.add(Dense(env.ACTION_SPACE_SIZE, activation='linear'))
+        model.compile(loss="mse", optimizer=Adam(
+            lr=0.001), metrics=['accuracy'])
         return model
 
     # Adds step's data to a memory replay array
@@ -298,12 +298,14 @@ class DQNAgent:
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
 
         # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0] for transition in minibatch])/255
+        current_states = np.array([transition[0]
+                                   for transition in minibatch])/255
         current_qs_list = self.model.predict(current_states)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array([transition[3] for transition in minibatch])/255
+        new_current_states = np.array(
+            [transition[3] for transition in minibatch])/255
         future_qs_list = self.target_model.predict(new_current_states)
 
         X = []
@@ -329,7 +331,8 @@ class DQNAgent:
             y.append(current_qs)
 
         # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X)/255, np.array(y), batch_size=MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
+        self.model.fit(np.array(X)/255, np.array(y), batch_size=MINIBATCH_SIZE, verbose=0,
+                       shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
 
         # Update target network counter every episode
         if terminal_state:
@@ -343,8 +346,6 @@ class DQNAgent:
     # Queries main network for Q values given current observation space (environment state)
     def get_qs(self, state):
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
-
-
 
 
 agent = DQNAgent()
