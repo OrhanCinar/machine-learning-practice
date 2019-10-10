@@ -1,16 +1,18 @@
+import numpy as np
+import keras.backend.tensorflow_backend as backend
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Activation, Flatten
-from keras.callbacks import TensorBoard
 from keras.optimizers import Adam
+from keras.callbacks import TensorBoard
+import tensorflow as tf
 from collections import deque
 import time
-import numpy as np
-import os
-import cv2
-from PIL import Image
-from tqdm import tqdm
-import tensorflow as tf
 import random
+from tqdm import tqdm
+import os
+from PIL import Image
+import cv2
+
 
 DISCOUNT = 0.99
 REPLAY_MEMORY_SIZE = 50_000  # How many last steps to keep for model training
@@ -186,7 +188,6 @@ class BlobEnv:
 
 env = BlobEnv()
 
-
 # For stats
 ep_rewards = [-200]
 
@@ -196,15 +197,15 @@ np.random.seed(1)
 tf.set_random_seed(1)
 
 # Memory fraction, used mostly when trai8ning multiple agents
-# gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
 # backend.set_session(tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)))
-
 
 # Create models folder
 if not os.path.isdir('models'):
     os.makedirs('models')
 
 
+# Own Tensorboard class
 class ModifiedTensorBoard(TensorBoard):
 
     # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
@@ -350,36 +351,48 @@ class DQNAgent:
 
 agent = DQNAgent()
 
-for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit="episode"):
+# Iterate over episodes
+for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
+
+    # Update tensorboard step every episode
     agent.tensorboard.step = episode
 
+    # Restarting episode - reset episode reward and step number
     episode_reward = 0
     step = 1
-    current_state = env.reset
 
+    # Reset environment and get initial state
+    current_state = env.reset()
+
+    # Reset flag and start iterating until episode ends
     done = False
-
     while not done:
+
+        # This part stays mostly the same, the change is to query a model for Q values
         if np.random.random() > epsilon:
+            # Get action from Q table
             action = np.argmax(agent.get_qs(current_state))
         else:
+            # Get random action
             action = np.random.randint(0, env.ACTION_SPACE_SIZE)
 
         new_state, reward, done = env.step(action)
 
+        # Transform new continous state to new discrete state and count reward
         episode_reward += reward
 
         if SHOW_PREVIEW and not episode % AGGREGATE_STATS_EVERY:
             env.render()
 
+        # Every step we update replay memory and train main network
         agent.update_replay_memory(
-            (current_state, actioni, reward, new_state, done))
+            (current_state, action, reward, new_state, done))
         agent.train(done, step)
 
         current_state = new_state
         step += 1
 
-      # Append episode reward to a list and log stats (every given number of episodes)
+    # Append episode reward to a list and log stats (every given number of episodes)
     ep_rewards.append(episode_reward)
     if not episode % AGGREGATE_STATS_EVERY or episode == 1:
         average_reward = sum(
