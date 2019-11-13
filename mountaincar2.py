@@ -62,7 +62,8 @@ if __name__ == '__main__':
             action_ = max_action(Q, state_)
 
             Q[state, action] = Q[state, action] + alpha * \
-                (reward + gamma * Q[state_, action_] - Q[state, action])
+                (reward + gamma * Q[state_, action_] -
+                 Q[state, action])  # BELLMAN
 
             state = state_
             total_rewards[i] = score
