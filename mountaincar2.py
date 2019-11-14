@@ -23,6 +23,7 @@ def max_action(Q, state, actions=[0, 1, 2]):
 
 if __name__ == '__main__':
     env = gym.make("MountainCar-v0")
+    print(env.observation_space)
     env._max_episodes = 200
     n_games = 50000
     alpha = 0.1
