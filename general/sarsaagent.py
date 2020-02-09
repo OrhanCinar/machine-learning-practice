@@ -3,12 +3,13 @@ import gym
 import matplotlib.pyplot as plt
 import pickle as pkl
 
+
 theta_space = np.linspace(-1, 1, 10)
 theta_dot_space = np.linspace(-5, 5, 10)
 
 
 def getstate(observation):
-    print("observation", observation)
+    #print("observation", observation)
     cos_theta1, sin_theta1, cos_theta2, sin_theta2, theta1_dot, theta2_dot = observation
     c_th1 = int(np.digitize(cos_theta1, theta_space))
     s_th1 = int(np.digitize(sin_theta1, theta_space))
@@ -64,8 +65,9 @@ if __name__ == '__main__':
         obs = env.reset()
         done = False
 
-        if i % 10000 == 0:
+        if i % 100 == 0:
             print(f"episode : {i} score : {score} eps : {eps}")
+            env.render()
         score = 0
         state = getstate(obs)
         action = max_action(
