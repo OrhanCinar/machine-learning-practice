@@ -1,5 +1,6 @@
 import gym
 import time
+
 env = gym.make("CartPole-v1")
 
 print("Action Space :", env.action_space)
