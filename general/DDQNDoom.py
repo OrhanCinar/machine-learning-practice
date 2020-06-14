@@ -191,7 +191,7 @@ class DDDQNet:
 
             self.absolute_errors = tf.abs(self.target_Q - self.Q)
 
-            self.loff = tf.reduce_mean(
+            self.loss = tf.reduce_mean(
                 self.ISWeights_ * tf.squared_difference(self.target_Q), self.Q)
 
             self.optimizer = tf.train.RMSPropOptimizer(
@@ -262,14 +262,14 @@ class Memory(object):
     def __init__(self, capacity):
         self.tree = SumTree(capacity)
 
-    def store(self.experience):
+    def store(self, experience):
         max_priority = np.max(self.tree[-self.tree.capacity:])
 
         if max_priority == 0:
             max_priority = self.absolute_error_upper
         self.tree.add(max_priority, experience)
 
-    def sample(self.n):
+    def sample(self, n):
         memory_b = []
         b_idex, b_ISWeights = np.empty(
             (n,), dtype=np.int32), np.empty((n, 1), dtype=np.float32)
@@ -305,3 +305,218 @@ class Memory(object):
 
         for ti, p in zip(tree_idx, ps):
             self.tree.update(ti, p)
+
+
+memory = Memory(memory_size)
+
+game.new_episode()
+
+for i in range(pretrain_length):
+    if i == 0:
+        state = game.get_state().screen_buffer
+        state, stacked_frames = stack_frames(stacked_frames, state, True)
+
+    action = random.choice(possible_actions)
+    reward = game.make_action(action)
+    done = game.is_episode_finished()
+
+    if done:
+        next_state = np.zeros(state.shape)
+        experience = state, action, reward, next_state, done
+        memory.store(experience)
+        game.new_episode()
+        state = game.get_state().screen_buffer
+        state, stacked_frames = stack_frames(stacked_frames, state, True)
+    else:
+        next_state = game.get_state().screen_buffer
+        next_state, stacked_frames = stack_frames(
+            stacked_frames, next_state, False)
+        experience = state, action, reward, next_state, done
+        memory.store(experience)
+        state = next_state
+
+writer = tf.summary.FileWriter("/tensorboard/ddqn/1")
+tf.summary.scalar("Loss", DQNetwork.loss)
+write_op = tf.summary.merge_all()
+
+
+def predict_action(explore_start, explore_stop, decay_rate, decay_step, state, acions):
+    exp_exp_tradeoff = np.random.rand()
+    explore_probability = explore_stop + \
+        (explore_start - explore_stop) * np.exp(-decay_rate * decay_step)
+
+    if(explore_probability > exp_exp_tradeoff):
+        action = random.choice(possible_actions)
+    else:
+        Qs = sess.run(DQNetwork.output, feed_dict=[DQNetwork.inputs_:state.reshape((1, *state.shape))])
+        choice = np.argmax(Qs)
+        action = possible_actions[int(choice)]
+    return action, explore_probability
+
+
+def update_target_graph():
+    from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABES, "DQNetwork")
+    to_vars = tf.get_collection(
+        tf.GraphKeys.TRAINABLE_VARIABES, "TargerNetwork")
+
+    op_holder = []
+
+    for from_var, to_var in zip(from_vars, to_vars):
+        op_holder.append(to_var.assign(from_var))
+    return op_holder
+
+
+saver = tf.train.Saver()
+
+if training = True:
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        decay_step = 0
+        tau = 0
+        game.init()
+        update_target = update_target_graph()
+        sess.run(update_target)
+
+    for episode in range(total_episodes):
+        step = 0
+        episode_rewards = []
+        game.new_episode()
+        state = game.get_state().screen_buffer
+        state, stacked_frames = stack_frames(stacked_frames, state, True)
+
+        while step < max_steps:
+            step += 1
+            tau += 1
+            decay_step += 1
+
+            action, explore_probability = predict_action(
+                explore_start, explore_stop, decay_rate, decay_step, state, possible_actions)
+
+            reward = game.make_action(action)
+            done = game.is_episode_finished()
+            episode_rewards.append(reward)
+
+            if done:
+                next_state = np.zeros((120, 140), dtype=np.int)
+                next_state, stacked_frames = stack_frames(
+                    stacked_frames, next_state, False)
+                step = max_steps
+                total_reward = np.sum(episode_rewards)
+
+                print('Episode: {}'.format(episode),
+                      'Total reward: {}'.format(total_reward),
+                      'Training loss: {:.4f}'.format(loss),
+                      'Explore P: {:.4f}'.format(explore_probability))
+
+                experience = state, action, reward, next_state, done
+                memory.store(experience)
+            else:
+                next_state = game.get_state().screen_buffer
+                next_state, stacked_frames = stack_frames(
+                    stacked_frames, next_state, False)
+                experience = state, action, reward, next_state, done
+                state = next_state
+
+            tree_idx, batch, ISWeights_mb = memory.sample(batch_size)
+
+            states_mb = np.array([each[0] for each in batch], ndmin=3)
+            actions_mb = np.array([each[1] for each in batch])
+            rewards_mb = np.array([each[2] for each in batch])
+            next_states_mb = np.array([each[3] for each in batch], ndmin=3)
+            dones_mb = np.array([each[4] for each in batch])
+
+            target_Qs_batch = []
+
+            q_next_state = sess.run(DQNetwork.output, feed_dict=[DQNetwork.inputs_:next_states_mb])
+
+            q_target_next_state = sess.run(TargetNetwork.output, feed_dict=[TargetNetwork.inputs_:next_states_mb])
+
+            for i in range(0, len(batch)):
+                terminal = dones_mb[i]
+
+                action = np.argmax(q_next_state[i])
+
+                if terminal:
+                    target_Qs_batch.append(rewards_mb[i])
+                else:
+                    target = rewards_mb[i] + gamme * \
+                        q_target_next_state[i][action]
+                    target_Qs_batch.append(target)
+
+            targets_mb = np.array([each for each in target_Qs_batch])
+
+            _, loss, absolute_errors = sess.run([DQNetwork.optimizer, DQNetwork.loss, DQNetwork.absolute_errors],
+                                                feed_dict={DQNetwork.inputs_: states_mb,
+                                                           DQNetwork.target_Q: targets_mb,
+                                                           DQNetwork.actions_: actions_mb,
+                                                           DQNetwork.ISWeigths_=ISWeights_mb})
+
+            memory.batch_update(tree_idx, abs_errors)
+
+            summary = sess.run(write_op, feed_dict={DQNetwork.inputs_: states_mb,
+                                                    DQNetwork.target_Q: targets_mb,
+                                                    DQNetwork.actions_: actions_mb,
+                                                    DQNetwork.ISWeigths_=ISWeights_mb})
+            writer.add_summary(summary, episode)
+            writer.flush()
+
+            if tau > max_tau:
+                update_target = update_target_graph()
+                sess.run(update_target)
+                tau = 0
+                print("Model Updated")
+
+        if episode % 5 == 0:
+            save_path = saver.save(sess, "./model,model.chpt")
+            print("Model Saved")
+
+with tf.Session() as sess:
+
+    game = DoomGame()
+
+    # Load the correct configuration (TESTING)
+    game.load_config("deadly_corridor_testing.cfg")
+
+    # Load the correct scenario (in our case deadly_corridor scenario)
+    game.set_doom_scenario_path("deadly_corridor.wad")
+
+    game.init()
+
+    # Load the model
+    saver.restore(sess, "./models/model.ckpt")
+    game.init()
+
+    for i in range(10):
+        game.new_episode()
+        state = game.get_state().screen_buffer
+        state, stacked_frames = stack_frames(stacked_frames, state, True)
+
+        while not game.is_episode_finished():
+            exp_exp_tradeoff = np.random.rand()
+            explore_probability = 0.01
+
+            if (explore_probability > exp_exp_tradeoff):
+                action = random.choice(possible_actions)
+
+            else:
+                Qs = sess.run(DQNetwork.output, feed_dict={
+                              DQNetwork.inputs_: state.reshape((1, *state.shape))})
+                choice = np.argmax(Qs)
+                action = possible_actions[int(choice)]
+
+            game.make_action(action)
+            done = game.is_episode_finished()
+
+            if done:
+                break
+
+            else:
+                next_state = game.get_state().screen_buffer
+                next_state, stacked_frames = stack_frames(
+                    stacked_frames, next_state, False)
+                state = next_state
+
+        score = game.get_total_reward()
+        print("Score: ", score)
+
+    game.close()
