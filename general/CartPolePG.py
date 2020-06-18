@@ -63,3 +63,76 @@ with tf.name_scope("inputs"):
 
     with tf.name_scope("train"):
         train_opt = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+
+writer = tf.summary.FileWriter("/tensorboard/pg/1")
+tf.summary.scalar("Loss", loss)
+tf.summary.scalar("Reward_mean", mean_reward_)
+
+write_op = tf.summary.merge_all()
+
+
+allRewards = []
+total_rewards = 0
+maximumRewardRecorded = 0
+episode = 0
+episode_states, episode_actions, episode_rewards = [], [], []
+saver = tf.train.Saver()
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+
+    for episode in range(max_episode):
+        episode_rewards_sum = 0
+        state = env.reset()
+        env.render()
+
+        while True:
+            action_probability_distribution = sess.run(action_distribution, feed_dict={
+                                                       input_: state.reshape([1, 4])})
+
+            action = np.random.choice(range(
+                action_probability_distribution.shape[1]), p=action_probability_distribution.ravel())
+
+            new_state, reward, done, info = env.step(action)
+            episode_states.append(state)
+            action_ = np.zeros(action_size)
+            action_[action] = 1
+            episode_actions.append(action_)
+            episode_rewards.append(reward)
+
+            if done:
+                episode_rewards_sum = np.sum(episode_rewards)
+                allRewards.append(episode_rewards_sum)
+                total_rewards = np.sum(allRewards)
+                mean_reward = np.divide(total_rewards, episode+1)
+                maximumRewardRecorded = np.amax(allRewards)
+
+                print("==========================================")
+                print("Episode: ", episode)
+                print("Reward: ", episode_rewards_sum)
+                print("Mean Reward", mean_reward)
+                print("Max reward so far: ", maximumRewardRecorded)
+
+                discounted_episode_rewards = discount_and_normalize_rewards(
+                    episode_rewards)
+
+                loss_, _ = sess.run([loss, train_opt], feed={input_: np.vstack(np.array(episode_states)),
+                                                             actions: np.vstack(np.array(episode_actions)),
+                                                             discounted_episode_rewards_: discounted_episode_rewards
+                                                             })
+
+                summary = sess.run(write_op, feed_dict={input_: np.vstack(np.array(episode_states)),
+                                                        actions: np.vstack(np.array(episode_actions)),
+                                                        discounted_episode_rewards_: discounted_episode_rewards,
+                                                        mean_reward_: mean_reward
+                                                        })
+
+                writer.add_summary(summary, episode_rewards)
+                writer.flush()
+
+                episode_states, episode_actions, episode_rewards = [], [], []
+                break
+        state = new_state
+    if episode % 100 == 0:
+        saver.save(sess, "./models/model.ckpt")
+        print("Model saved")
