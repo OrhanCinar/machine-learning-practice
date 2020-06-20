@@ -268,3 +268,96 @@ def make_batch(batch_size, stacked_frames):
                 stacked_frames, next_state, False)
             state = next_state
     return np.stack(np.array(states)), np.stack(np.array(actions)), np.concatenate(rewards_of_batch), np.concatenate(discounted_rewards), episode_num
+
+
+allRewards = []
+total_rewards = 0
+maximumRewardRecorded = 0
+mean_reward_total = []
+epoch = 1
+average_reward = []
+
+saver = tf.train.Saver()
+
+if training:
+    while epoch < num_epochs + 1:
+        states_mb, actions_mb, rewards_of_batch, discounted_rewards_mb, nb_episode_mb = make_batch(
+            batch_size, stacked_frames)
+
+        total_rewards_of_that_batch = np.sum(rewards_of_batch)
+        allRewards.append(total_rewards_of_that_batch)
+
+        mean_reward_of_that_batch = np.divide(
+            total_rewards_of_that_batch, nb_episode_mb)
+        mean_reward_total.append(mean_reward_of_that_batch)
+
+        average_reward_of_all_training = np.divide(
+            np.sum(mean_reward_total), epoch)
+
+        maximumRewardRecorded = np.amax(allRewards)
+
+        print("==========================================")
+        print("Epoch: ", epoch, "/", num_epochs)
+        print("-----------")
+        print("Number of training episodes: {}".format(nb_episodes_mb))
+        print("Total reward: {}".format(
+            total_reward_of_that_batch, nb_episodes_mb))
+        print("Mean Reward of that batch {}".format(mean_reward_of_that_batch))
+        print("Average Reward of all training: {}".format(
+            average_reward_of_all_training))
+        print("Max reward for a batch so far: {}".format(maximumRewardRecorded))
+
+        loss_, _ = sess.run([PGNetwork.loss, PGNetwork.train_opt], feed_dict={PGNetwork.inputs_: states_mb.reshape((len(states_mb), 84, 84, 4)),
+                                                                              PGNetwork.actions: actions_mb,
+                                                                              PGNetwork.discounted_episode_rewards_: discounted_rewards_mb
+                                                                              })
+        print("Training Loss: {}".format(loss_))
+
+        summary = sess.run(write_op, feed_dict={PGNetwork.inputs_: states_mb.reshape((len(states_mb), 8, 4, 84, 4)),
+                                                PGNetwork.actions: actions_mb,
+                                                PGNetwork.discounted_episode_rewards_: discounted_rewards_mb,
+                                                PGNetwork.mean_rewards_: mean_reward_of_that_batch
+                                                })
+
+        wrtier.add_summar(summary, epoch)
+        writer.flush()
+
+        if epoch % 10 == 0:
+            saver.save(sess, "./models/model.ckpt")
+            print("Model Saved")
+        epoch += 1
+
+
+saver = tf.train.Saver()
+
+with tf.Session() as sess:
+    game = DoomGame()
+    game.load_config("health_gathering.cfg")
+    game.set_doom_scenario_path("health_gathering.wad")
+
+    saver.restore(sess, "/.models/model.ckpt")
+    game.init()
+
+    for i in range(10):
+        game.new_episode()
+        state = game.get_state().screen_buffer
+        state, stacked_frame = stack_frames(stack_frames, state, True)
+
+        while not game.is_episode_finished():
+            action_probability_distribution = sess.run(PGNetwork.action_probability_distribution, feed_dict={
+                                                       PGNetwork.inputs_: state.reshape(1, *state_size)})
+            action = np.random.choice(range(
+                action_probability_distribution.shape[1]), p=action_probability_distribution.ravell())
+            action = possible_actions[action]
+            reward = game.make_Action(action)
+            done = game.is_episode_finished()
+
+            if done:
+                break
+            else:
+                next_state = game.get_state().screen_buffer
+                next_state, stacked_frames = stack_frames(
+                    stack_frames, next_state, False)
+                state = next_state
+        print("Score for episode ", i, " :", game.get_total_reward())
+    game.close()
