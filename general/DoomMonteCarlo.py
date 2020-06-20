@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore")
 
+# https://github.com/simoninithomas/Deep_reinforcement_learning_Course/blob/master/Policy%20Gradients/Doom/Doom%20REINFORCE%20Monte%20Carlo%20Policy%20gradients.ipynb
+
 
 def create_environment():
     game = DoomGame()
@@ -219,3 +221,50 @@ writer = tf.summary.FileWrtier("/tensorboard/pg/test")
 tf.summary.scalar("Loss", PGNetwork.loss)
 tf.summary.scalar("Reward_mean", PGNetwork.mean_rewards_)
 write_op = tf.summary.merge_all()
+
+
+def make_batch(batch_size, stacked_frames):
+    states, actions, rewards_of_episode, rewards_of_batch, discounted_rewards = [], [], [], [], []
+    episode_num = 1
+    game.new_episode()
+    state = game.get_state().screen_buffer
+    state, stacked_frames = stack_frames(stacked_frames, state, True)
+
+    while True:
+        action_probability_distribution = sess.run(PGNetwork.action_distribution, feed_dict={
+                                                   PGNetwork.inputs_: state.reshape(1, *state_size)})
+
+        action = np.random(range(
+            action_probability_distribution.shape[1]), p=action_probability_distribution.ravel())
+        action = possible_actions[action]
+
+        reward = game.make_action(action)
+        done = game.is_episode_finished()
+
+        states.append(state)
+        actions.append(action)
+        rewards_of_episode.append(reward)
+
+        if done:
+            next_state = np.zeros((84, 84), dtype=np.int)
+            next_state, stacked_frames = stack_frames(
+                stacked_frames, next_state, False)
+            rewards_of_batch.append(rewards_of_episodes)
+            discounted_rewards.append(
+                discount_and_normalize_rewards(rewards_of_episode))
+
+            if len(np.concatenate(rewards_of_batch)) > batch_size:
+                break
+
+            rewards_of_episode = []
+            episode_num += 1
+            game.new_episode()
+            state = game.get_state().screen_buffer
+            state, stacked_frames = stack_frames(
+                stacked_frames, state, True)
+        else:
+            next_state = game.get_state().screen_buffer
+            next_state, stacked_frames = stack_frames(
+                stacked_frames, next_state, False)
+            state = next_state
+    return np.stack(np.array(states)), np.stack(np.array(actions)), np.concatenate(rewards_of_batch), np.concatenate(discounted_rewards), episode_num
