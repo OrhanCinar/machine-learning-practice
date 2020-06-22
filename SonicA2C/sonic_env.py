@@ -25,3 +25,126 @@ class PreprocessFrame(gym.ObservationWrapper):
                            interpolation=cv2.INTER_AREA)
         frame = fame[:, :, None]
         return frame
+
+
+class ActionsDiscretizer(gym.ActionWrapper):
+    def __init__(self, env):
+        super(ActionsDiscretizer, self).__init__(env)
+        buttons = ["B", "A", "MODE", "START", "UP",
+            "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
+        actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
+                   ['DOWN', 'B'], ['B']]
+        self._actions = []
+
+        for action in actions:
+            arr = np.array([False] * 12)
+            for button in buttons:
+                arr[buttons.index(button))]) True
+            self._actions.append(arr)
+        self.action_space=gym.spaces.Discrete(len(self._actions))
+
+    def action(self, a):
+        return self._actions[a].copy()
+
+class RewardScaler(gym.RewardWrapper):
+    def reward(self, reward):
+        return reward * 0.01
+
+class AllowBackTracking(gym.Wrapper):
+    def __init__(self, env):
+        super(AllowBackTracking, self).__init__(env)
+        self._curr_x=0
+        self._max_x=0
+    def reset(self, **kwargs):
+        self._curr_x=0
+        self._max_x=0
+        return self.env.reset(**kwargs)
+
+def make_env(env_idx):
+    dicts=[
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'SpringYardZone.Act3'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'SpringYardZone.Act2'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'GreenHillZone.Act3'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'GreenHillZone.Act1'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'StarLightZone.Act2'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'StarLightZone.Act1'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'MarbleZone.Act2'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'MarbleZone.Act1'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'MarbleZone.Act3'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'ScrapBrainZone.Act2'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'LabyrinthZone.Act2'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'LabyrinthZone.Act1'},
+        {'game': 'SonicTheHedgehog-Genesis', 'state': 'LabyrinthZone.Act3'}
+        ]
+
+    print(dicts[env_idx]['game'], dicts[env_idx]['state'], flush=True)
+
+    env=make(game=dicts[env_idx]['game'],
+             state=dicts[env_idx]['state'], bk2dir="./records")
+
+    env=ActionsDiscretizer(env)
+
+    env=RewardScaler(env)
+
+    env=PreprocessFrame(env)
+
+    env=FrameStack(env, 4)
+
+    env=AllowBackTracking(env)
+
+    return env
+
+
+def make_train_0():
+    return make_env(0)
+
+def make_train_1():
+    return make_env(1)
+
+def make_train_2():
+    return make_env(2)
+
+def make_train_3():
+    return make_env(3)
+
+def make_train_4():
+    return make_env(4)
+
+def make_train_5():
+    return make_env(5)
+
+def make_train_6():
+    return make_env(6)
+
+def make_train_7():
+    return make_env(7)
+
+def make_train_8():
+    return make_env(8)
+
+def make_train_9():
+    return make_env(9)
+
+def make_train_10():
+    return make_env(10)
+
+def make_train_11():
+    return make_env(11)
+
+def make_train_12():
+    return make_env(12)
+
+def make_test_level_Green():
+    return make_test()
+
+def make_test():
+     env=make_retro(game='SonicTheHedgehog-Genesis',
+                    state='GreenHillZone.Act2', record="./records")
+
+    env=ActionsDiscretizer(env)
+    env=RewardScaler(env)
+    env=PreprocessFrame(env)
+    env=FrameStack(env, 4)
+    env=AllowBackTracking(env)
+
+    return env
