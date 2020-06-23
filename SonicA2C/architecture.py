@@ -50,7 +50,7 @@ class A2CPolicy(object):
         a0 = self.pd.sample()
 
         def step(state_in, *_args, **_kwargs):
-            action, value = sess.run([a0, vf], (inputs_: state_in))
+            action, value = sess.run([a0, vf], {nputs_: state_in})
 
             return action, value
 

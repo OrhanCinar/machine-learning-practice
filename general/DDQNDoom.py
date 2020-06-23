@@ -348,7 +348,8 @@ def predict_action(explore_start, explore_stop, decay_rate, decay_step, state, a
     if(explore_probability > exp_exp_tradeoff):
         action = random.choice(possible_actions)
     else:
-        Qs = sess.run(DQNetwork.output, feed_dict=[DQNetwork.inputs_:state.reshape((1, *state.shape))])
+        Qs = sess.run(DQNetwork.output, feed_dict={
+                      DQNetwork.inputs_: state.reshape((1, *state.shape))})
         choice = np.argmax(Qs)
         action = possible_actions[int(choice)]
     return action, explore_probability
@@ -368,7 +369,7 @@ def update_target_graph():
 
 saver = tf.train.Saver()
 
-if training = True:
+if training == True:
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         decay_step = 0
@@ -427,9 +428,11 @@ if training = True:
 
             target_Qs_batch = []
 
-            q_next_state = sess.run(DQNetwork.output, feed_dict=[DQNetwork.inputs_:next_states_mb])
+            q_next_state = sess.run(DQNetwork.output, feed_dict={
+                                    DQNetwork.inputs_: next_states_mb})
 
-            q_target_next_state = sess.run(TargetNetwork.output, feed_dict=[TargetNetwork.inputs_:next_states_mb])
+            q_target_next_state = sess.run(TargetNetwork.output, feed_dict={
+                                           TargetNetwork.inputs_: next_states_mb})
 
             for i in range(0, len(batch)):
                 terminal = dones_mb[i]
@@ -449,14 +452,14 @@ if training = True:
                                                 feed_dict={DQNetwork.inputs_: states_mb,
                                                            DQNetwork.target_Q: targets_mb,
                                                            DQNetwork.actions_: actions_mb,
-                                                           DQNetwork.ISWeigths_=ISWeights_mb})
+                                                           DQNetwork.ISWeigths_: ISWeights_mb})
 
             memory.batch_update(tree_idx, abs_errors)
 
             summary = sess.run(write_op, feed_dict={DQNetwork.inputs_: states_mb,
                                                     DQNetwork.target_Q: targets_mb,
                                                     DQNetwork.actions_: actions_mb,
-                                                    DQNetwork.ISWeigths_=ISWeights_mb})
+                                                    DQNetwork.ISWeigths_: ISWeights_mb})
             writer.add_summary(summary, episode)
             writer.flush()
 
