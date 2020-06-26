@@ -85,3 +85,56 @@ class Model(object):
         self.save = save
         self.load = load
         tf.global_variables_initializer().run(session=sess)
+
+
+class Runner(AbtractEnvRunner):
+    def __init__(selv, env, model, nsteps, total_timesteps, gamma, lam):
+        super().__init(env=env, model=model, nsteps=nsteps)
+
+        self.gamma = gamma
+        self.kam = lam
+        self.total_timesteps = total_timesteps
+
+    def run(self):
+        mb_obs, mb_actions, mb_rewards, mb_values, mb_dones = [], [], [], [], []
+
+        for n in range(self.nsteps):
+            actions, values = self.model.step(self.obs, self.dones)
+            mb_obs.append(np.copy(self.obs))
+            mb_actions.append(actions)
+            mb_dones.append(values)
+            self.obs[:], rewards, self.dones, _ = self.env.step(actions)
+            mb_rewards.append(rewards)
+
+        mb_obs = np.asarray(mb_obs, dtype=np.uint8)
+        mb_rewards = np.asarray(mb_rewards, dtype=np.uint8)
+        mb_actions = np.asarray(mb_actions, dtype=np.uint8)
+        mb_values = np.asarray(mb_values, dtype=np.uint8)
+        mb_dones = np.asarray(mb_dones, dtype=np.uint8)
+        last_values = self.model.value(self.obs)
+
+        mb_returns = np.zeros_like(mb_rewards)
+        mb_advantages = np.zeros_like(mb_rewards)
+
+        lastgaelam = 0
+
+        for t in reversed(range(self.nsteps)):
+            if t == self.nsteps - 1:
+                nextnonterminal = 1.0 - self.dones
+                nextvalues = last_values
+            else:
+                nextnonterminal = 1.0 - mb_dones[t+1]
+                nextvalues = mb_values[t+1]
+            delta = mb_rewards[t] + self.gamma * \
+                nextvalues * nextnonterminal - mb_values[t]
+
+            mb_advantages[t] = lastgaelam = delta + \
+                self.gamma * self.lam * nextnonterminal * lastgaelam
+        mb_returns = mb_advantages + mb_values
+
+        return map(sf01, (mb_obs, mb_actions, mb_returns, mb_values))
+
+
+def sf01(arr):
+    s = arr.shape
+    return arr.swapaxes(0, 1).reshape(s[0]*s[1], *s[2:])
