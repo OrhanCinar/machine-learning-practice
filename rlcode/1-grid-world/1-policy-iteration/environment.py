@@ -31,3 +31,74 @@ class GraphicDisplay(tk.Tk):
         self.text_reward(2, 2, "R : 1.0")
         self.text_reward(1, 2, "R : -1.0")
         self.text_reward(2, 1, "R : -1.0")
+
+    def __build_canvas(self):
+        canvas = tk.Canvas(self, bg='white',
+                           height=HEIGHT * UNIT,
+                           width=WIDTH * UNIT)
+
+        iteration_button = Button(
+            self, text='Evaluate', command=self.evaluate_policy)
+        iteration_button.configure(width=10, activebackground="#33B5E5")
+        canvas.create_window(WIDTH * UNIT * 0.13, HEIGHT *
+                             UNIT + 10, window=iteration_button)
+
+        policy_button = Button(self, text="Improve",
+                               command=self.improve_policy)
+        policy_button.configure(width=10, activebackground="#33B5E5")
+        canvas.create_window(WIDTH * UNIT * 0.37, HEIGHT *
+                             UNIT + 10, window=policy_button)
+
+        policy_button = Button(self, text="move", command=self.move_by_policy)
+        policy_button.configure(width=10, activebackground="#33B5E5")
+        canvas.create_window(WIDTH * UNIT * 0.62, HEIGHT *
+                             UNIT + 10, window=policy_button)
+
+        policy_button = Button(self, text="reset", command=self.reset)
+        policy_button.configure(width=10, activebackground="#33B5E5")
+        canvas.create_window(WIDTH * UNIT * 0.87, HEIGHT *
+                             UNIT + 10, window=policy_button)
+
+        # create grids
+        for col in range(0, WIDTH*UNIT, UNIT):
+            x0, y0, x1, y1 = col, 0, col, HEIGHT * UNIT
+            canvas.create_line(x0, y0, x1, y1)
+
+        for row in range(0, HEIGHT * UNIT, UNIT):
+            x0, y0, x1, y1 = 0, row, HEIGHT*UNIT, row
+            canvas.create_line(x0, y0, x1, y1)
+
+        self.rectangle = canvas.create_image(50, 50, image=self.shapes[0])
+        canvas.create_image(250, 150, image=self.shapes[1])
+        canvas.create_image(150, 250, image=self.shapes[1])
+        canvas.create_image(250, 250, image=self.shapes[2])
+
+        canvas.pack()
+        return canvas
+
+    def load_images(self):
+        up = PhotoImage(Image.open("../img/up.png").resize(13, 13))
+        right = PhotoImage(Image.open("../img/right.png").resize(13, 13))
+        left = PhotoImage(Image.open("../img/left.png").resize(13, 13))
+        down = PhotoImage(Image.open("../img/down.png").resize(13, 13))
+        rectangle = PhotoImage(Image.open(
+            "../img/rectangle.png").resize(65, 65))
+        triangle = PhotoImage(Image.open("../img/triangle.png").resize(65, 65))
+        circle = PhotoImage(Image.open("../img/circle.png").resize(65, 65))
+        return (up, down, left, right), (rectangle, triangle, circle)
+
+    def reset(self):
+        if self.is_moving == 0:
+            self.evaluation_count = 0
+            self.improvement_count = 0
+            for i in self.texts:
+                self.canvas.delete(i)
+
+            for i in self.arrows:
+                self.canvas.delete(i)
+            self.agent.value_table = [[0.0] * WIDTH for _ in range(HEIGHT)]
+            self.agent_policy_table = (
+                [[[0.25, 0.25, 0.25, 0.25]] * WIDTH for _ in range(HEIGHT)])
+            self.agent.policy_table[2][2] = []
+            x, y = self.canvas.coords(self.rectangle)
+            self.canvas.move(self.rectangle, UNIT / 2 - x, UNIT / 2 - y)
