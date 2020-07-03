@@ -102,3 +102,40 @@ class GraphicDisplay(tk.Tk):
             self.agent.policy_table[2][2] = []
             x, y = self.canvas.coords(self.rectangle)
             self.canvas.move(self.rectangle, UNIT / 2 - x, UNIT / 2 - y)
+
+    def text_value(self, row, col, contents, font='Helvetiva', size=10, style='normal', anchor='nw'):
+        origin_x, origin_y = 85, 70
+        x, y = origin_y + (UNIT * col), origin_x + (UNIT * row)
+        font = (font, str(size), style)
+        text = self.canvas.create_text(
+            x, y, fill="black", text=contents, font=font, anchor=anchor)
+        return self.texts.append(text)
+
+    def text_reward(self, row, col, contents, font='Helvetiva', size=10, style='normal', anchor='nw'):
+        origin_x, origin_y = 5, 5
+        x, y = origin_y + (UNIT * col), origin_x + (UNIT * row)
+        font = (font, str(size), style)
+        text = self.canvas.create_text(
+            x, y, fill="black", text=contents, font=font, anchor=anchor)
+        return self.texts.append(text)
+
+    def rectangle_move(self, action):
+        base_action = np.array([0, 0])
+        location = self.find_rectangle()
+        self.render()
+
+        if action == 0 and location[0] > 0:
+            base_action[1] -= UNIT
+        elif action == 1 and location[0] < HEIGHT - 1:
+            base_action[1] += UNIT
+        elif action == 2 and location[1] > 0:
+            base_action[0] -= UNIT
+        elif action == 3 and location[1] < WIDTH-1:
+            base_action[0] += UNIT
+        self.canvas.move(self.rectangle, base_action[0], base_action[1])
+
+    def find_rectangle(self):
+        temp = self.canvas.coords(self.rectangle)
+        x = (temp[0] / 100) - 0.5
+        y = (temp[1] / 100) - 0.5
+        return int(y), int(x)
