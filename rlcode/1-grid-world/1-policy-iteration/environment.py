@@ -139,3 +139,70 @@ class GraphicDisplay(tk.Tk):
         x = (temp[0] / 100) - 0.5
         y = (temp[1] / 100) - 0.5
         return int(y), int(x)
+
+    def move_bypolicy(self):
+        if self.improvement_count != 0 and self.is_moving != 1:
+            self.is_moving = 1
+
+            x, y = self.canvas.coords(self.rectangle)
+            self.canvas.move(self.rectangle, UNIT/2-x, UNIT/2-y)
+
+            x, y = self.find_rectangle()
+            while len(self.agent_policy_table[x][y]) != 0:
+                self.after(100, self.rectangle_move(
+                    self.agent.get_action([x, y])))
+                x, y = self.find_rectangle()
+            self.is_moving = 0
+
+    def draw_one_arrow(self, col, row, policy):
+        if col == 2 and row == 2:
+            return
+
+        if policy[0] > 0:
+            origin_x, origin_y = 50 + (UNIT * row), 10 + (UNIT * col)
+            self.arrows.append(self.canvas.create_image(
+                origin_x, origin_y, image=self.up))
+
+        if policy[1] > 0:
+            origin_x, origin_y = 50 + (UNIT * row), 90 + (UNIT * col)
+            self.arrows.append(self.canvas.create_image(
+                origin_x, origin_y, image=self.down))
+
+        if policy[2] > 0:
+            origin_x, origin_y = 10 + (UNIT * row), 50 + (UNIT * col)
+            self.arrows.append(self.canvas.create_image(
+                origin_x, origin_y, image=self.left))
+
+        if policy[3] > 0:
+            origin_x, origin_y = 90 + (UNIT * row), 50 + (UNIT * col)
+            self.arrows.append(self.canvas.create_image(
+                origin_x, origin_y, image=self.down))
+
+    def draw_from_policy(self, policy_table):
+        for i in range(HEIGHT):
+            for j in rang(WIDTH):
+                self.draw_one_arrow(i, j, policy_table[i][j])
+
+    def print_value_policy(self, value_table):
+        for i in range(HEIGHT):
+            for j in rang(WIDTH):
+                self.text_value(i, j, value_table[i][j])
+
+    def render(self):
+        time.sleep(0.1)
+        self.canvas.tag_raise(self.rectangle)
+        self.update()
+
+    def evaluate_policy(self):
+        self.evaluation_count += 1
+        for i in self.texts:
+            self.canvas.delete(i)
+        self.agent.policy_evaluation()
+        self.print_value_policy(self.agent.value_table)
+
+    def improve_policy(self):
+        self.improvement_count += 1
+        for i in self.arrows:
+            self.canvas.delete(i)
+        self.agent.policy_improvement()
+        self.draw_from_policy(self.agent.policy_table)
