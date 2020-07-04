@@ -77,14 +77,15 @@ class GraphicDisplay(tk.Tk):
         return canvas
 
     def load_images(self):
-        up = PhotoImage(Image.open("../img/up.png").resize(13, 13))
-        right = PhotoImage(Image.open("../img/right.png").resize(13, 13))
-        left = PhotoImage(Image.open("../img/left.png").resize(13, 13))
-        down = PhotoImage(Image.open("../img/down.png").resize(13, 13))
+        up = PhotoImage(Image.open("../img/up.png").resize((13, 13)))
+        right = PhotoImage(Image.open("../img/right.png").resize((13, 13)))
+        left = PhotoImage(Image.open("../img/left.png").resize((13, 13)))
+        down = PhotoImage(Image.open("../img/down.png").resize((13, 13)))
         rectangle = PhotoImage(Image.open(
-            "../img/rectangle.png").resize(65, 65))
-        triangle = PhotoImage(Image.open("../img/triangle.png").resize(65, 65))
-        circle = PhotoImage(Image.open("../img/circle.png").resize(65, 65))
+            "../img/rectangle.png").resize((65, 65)))
+        triangle = PhotoImage(Image.open(
+            "../img/triangle.png").resize((65, 65)))
+        circle = PhotoImage(Image.open("../img/circle.png").resize((65, 65)))
         return (up, down, left, right), (rectangle, triangle, circle)
 
     def reset(self):
@@ -97,7 +98,7 @@ class GraphicDisplay(tk.Tk):
             for i in self.arrows:
                 self.canvas.delete(i)
             self.agent.value_table = [[0.0] * WIDTH for _ in range(HEIGHT)]
-            self.agent_policy_table = (
+            self.agent.policy_table = (
                 [[[0.25, 0.25, 0.25, 0.25]] * WIDTH for _ in range(HEIGHT)])
             self.agent.policy_table[2][2] = []
             x, y = self.canvas.coords(self.rectangle)
@@ -140,7 +141,7 @@ class GraphicDisplay(tk.Tk):
         y = (temp[1] / 100) - 0.5
         return int(y), int(x)
 
-    def move_bypolicy(self):
+    def move_by_policy(self):
         if self.improvement_count != 0 and self.is_moving != 1:
             self.is_moving = 1
 
@@ -148,7 +149,7 @@ class GraphicDisplay(tk.Tk):
             self.canvas.move(self.rectangle, UNIT/2-x, UNIT/2-y)
 
             x, y = self.find_rectangle()
-            while len(self.agent_policy_table[x][y]) != 0:
+            while len(self.agent.policy_table[x][y]) != 0:
                 self.after(100, self.rectangle_move(
                     self.agent.get_action([x, y])))
                 x, y = self.find_rectangle()
@@ -180,12 +181,12 @@ class GraphicDisplay(tk.Tk):
 
     def draw_from_policy(self, policy_table):
         for i in range(HEIGHT):
-            for j in rang(WIDTH):
+            for j in range(WIDTH):
                 self.draw_one_arrow(i, j, policy_table[i][j])
 
     def print_value_policy(self, value_table):
         for i in range(HEIGHT):
-            for j in rang(WIDTH):
+            for j in range(WIDTH):
                 self.text_value(i, j, value_table[i][j])
 
     def render(self):
@@ -206,3 +207,43 @@ class GraphicDisplay(tk.Tk):
             self.canvas.delete(i)
         self.agent.policy_improvement()
         self.draw_from_policy(self.agent.policy_table)
+
+
+class Env:
+    def __init__(self):
+        self.transition_probability = TRANSITION_PROB
+        self.width = WIDTH
+        self.height = HEIGHT
+        self.reward = [[0] * WIDTH for _ in range(HEIGHT)]
+        self.possible_actions = POSSIBLE_ACTIONS
+        self.reward[2][2] = 1
+        self.reward[1][2] = -1
+        self.reward[2][1] = -1
+        self.all_state = []
+
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                state = [x, y]
+                self.all_state.append(state)
+
+    def get_reward(self, state, action):
+        next_state = self.state_after_action(state, action)
+        return self.reward[next_state[0]][next_state[1]]
+
+    def state_after_action(self, state, action_index):
+        action = ACTIONS[action_index]
+        return self.check_boundry([state[0] + action[0], state[1] + action[1]])
+
+    @staticmethod
+    def check_boundry(state):
+        state[0] = (0 if state[0] < 0 else WIDTH -
+                    1 if state[0] > WIDTH - 1 else state[0])
+        state[1] = (0 if state[1] < 0 else WIDTH -
+                    1 if state[1] > WIDTH - 1 else state[1])
+        return state
+
+    def get_transition_probe(self, state, action):
+        return self.transition_probability
+
+    def get_all_states(self):
+        return self.all_state
