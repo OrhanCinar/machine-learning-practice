@@ -157,9 +157,9 @@ class GraphicDisplay(tk.Tk):
             self.canvas.move(self.rectangle, UNIT/2-x, UNIT/2-y)
 
             x, y = self.find_rectangle()
-            while len(self.agent.policy_table[x][y]) != 0:
-                self.after(100, self.rectangle_move(
-                    self.agent.get_action([x, y])))
+            while len(self.agent.get_action([x, y])) != 0:
+                action = random.sample(self.agent.get_action([x, y]), 1)[0]
+                self.after(100, self.rectangle_move(action))
                 x, y = self.find_rectangle()
             self.is_moving = 0
 
