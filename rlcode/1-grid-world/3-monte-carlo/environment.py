@@ -48,3 +48,57 @@ class Env(tk.Tk):
             "../img/triangle.png").resize((65, 65)))
         circle = PhotoImage(Image.open("../img/circle.png").resize((65, 65)))
         return rectangle, triangle, circle
+
+    @staticmethod
+    def coords_to_state(coords):
+        x = int((coords[0]-50) / 100)
+        y = int((coords[0]-50) / 100)
+        return [x, y]
+
+    def reset(self):
+        self.update()
+        time.sleep(0.5)
+        x, y = self.canvas.coords(self.rectangle)
+        self.canvas.move(self.rectangle, UNIT / 2-x, UNIT / 2 - y)
+        return self.coords_to_state(self.canvas.coords(self.rectangle))
+
+    def step(self, action):
+        state = self.canvas.coords(self.rectangle)
+        base_action = np.array([0, 0])
+        self.render()
+
+        if action == 0:
+            if state[1] > UNIT:
+                base_action[1] -= UNIT
+        elif action == 1:
+            if state[1] < (HEIGHT-1)*UNIT:
+                base_action[1] += UNIT
+        elif action == 2:
+            if state[0] > UNIT:
+                base_action[0] -= UNIT
+        elif action == 3:
+            if state[0] < (WIDTH-1) * UNIT:
+                base_action[0] += UNIT
+
+        self.canvas.move(self.rectangle, base_action[0], base_action[1])
+        self.canvas.tag_raise(self.rectangle)
+
+        next_state = self.canvas.coords(self.rectangle)
+
+        if next_state == self.canvas.coords(self.circle):
+            reward = 100
+            done = True
+        elif next_state in [self.canvas.coords(self.triangle1),
+                            self.canvas.coords(self.triangle2)]:
+            reward = -100
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        next_state = self.coords_to_state(next_state)
+        return next_state, reward, done
+
+    def render(self):
+        time.sleep(0.03)
+        self.update()
