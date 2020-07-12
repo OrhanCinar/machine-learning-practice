@@ -25,18 +25,17 @@ class Env(tk.Tk):
         canvas = tk.Canvas(self, bg='white', height=HEIGHT *
                            UNIT, width=WIDTH * UNIT)
 
-        for c in range(0, WIDTH * UNIT, UNIT):
-            x0, y0, x1, y2 = c, 0, c, HEIGHT*UNIT
+        for c in range(0, WIDTH * UNIT, UNIT):  # 0~400 by 80
+            x0, y0, x1, y1 = c, 0, c, HEIGHT * UNIT
             canvas.create_line(x0, y0, x1, y1)
-
-        for r in range(0, HEIGHT * UNIT, UNIT):
-            x0, y0, x1, y2 = r, 0, r, HEIGHT*UNIT
+        for r in range(0, HEIGHT * UNIT, UNIT):  # 0~400 by 80
+            x0, y0, x1, y1 = 0, r, HEIGHT * UNIT, r
             canvas.create_line(x0, y0, x1, y1)
 
         self.rectangle = canvas.create_image(50, 50, image=self.shapes[0])
         self.triangle1 = canvas.create_image(250, 150, image=self.shapes[1])
-        self.triangle2 = canvas.create_image(150, 250, image=self.shapes[2])
-        self.circle = canvas.create_image(250, 250, image=self.shapes[3])
+        self.triangle2 = canvas.create_image(150, 250, image=self.shapes[1])
+        self.circle = canvas.create_image(250, 250, image=self.shapes[2])
 
         canvas.pack()
         return canvas
