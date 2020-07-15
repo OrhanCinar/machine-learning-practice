@@ -90,7 +90,7 @@ class Env(tk.Tk):
         time.sleep(0.5)
         x, y = self.canvas.coords(self.rectangle)
         self.canvas.move(self.rectangle, UNIT / 2 - x, UNIT / 2 - y)
-        self.redner()
+        self.render()
         return self.coords_to_state(self.canvas.coords(self.rectangle))
 
     def step(self, action):
@@ -113,6 +113,7 @@ class Env(tk.Tk):
 
         self.canvas.move(self.rectangle, base_action[0], base_action[1])
         self.canvas.tag_raise(self.rectangle)
+        next_state = self.canvas.coords(self.rectangle)
 
         if next_state == self.canvas.coords(self.circle):
             rewward = 100
