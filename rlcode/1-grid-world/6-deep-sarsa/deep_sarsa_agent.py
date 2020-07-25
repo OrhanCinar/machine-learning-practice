@@ -26,3 +26,78 @@ class DeepSARSAAgent:
         if self.load_model:
             self.epsilon = 0.05
             self.model.load_weights('./save_model/deep_sarsa_trained.h5')
+
+    def build_model(self):
+        model = Sequential()
+        model.add(Dense(30, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(30, activation='relu'))
+        model.add(Dense(self.action_size, activation='linear'))
+        model.summar()
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        return model
+
+    def get_action(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            state = np.float32(state)
+            q_values = self.model.predict(state)
+            return np.argmax(q_values[0])
+
+    def train_model(self, state, action, reward, next_state, next_action, done):
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+        state = np.float32(state)
+        next_state = np.float32(next_state)
+        target = self.model.predict(state)[0]
+        if done:
+            target[action] = reward
+        else:
+            target[action] = (reward + self.discount_factor *
+                              self.model.predict(next_state)[0][next_action])
+
+        target = np.reshape(target, [1, 5])
+        self.model.fit(state, target, epochs=1, verbose=0)
+
+
+if __name__ == "__main__":
+    env = Env()
+    agent = DeepSARSAgent()
+
+    global_step = 0
+    scores, episodes = [], []
+
+    for e in range(EPISODES):
+        done = False
+        score = 0
+        state = env.reset()
+        state = np.reshape(state, [1, 15])
+
+        while not done:
+            # fresh env
+            global_step += 1
+
+            # get action for the current state and go one step in environment
+            action = agent.get_action(state)
+            next_state, reward, done = env.step(action)
+            next_state = np.reshape(next_state, [1, 15])
+            next_action = agent.get_action(next_state)
+            agent.train_model(state, action, reward, next_state, next_action,
+                              done)
+            state = next_state
+            # every time step we do training
+            score += reward
+
+            state = copy.deepcopy(next_state)
+
+            if done:
+                scores.append(score)
+                episodes.append(e)
+                pylab.plot(episodes, scores, 'b')
+                pylab.savefig("./save_graph/deep_sarsa_.png")
+                print("episode:", e, "  score:", score, "global_step",
+                      global_step, "  epsilon:", agent.epsilon)
+
+        if e % 100 == 0:
+            agent.model.save_weights("./save_model/deep_sarsa.h5")
