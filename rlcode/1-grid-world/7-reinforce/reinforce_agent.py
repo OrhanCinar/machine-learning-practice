@@ -25,3 +25,28 @@ class Reinforcement:
 
         if self.load_model:
             self.model.load_weights('./save_model/reinforce_trained.h5')
+
+    def build_model(self):
+        model = Sequential()
+        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(24, activation='relu'))
+        model.add(Dense(self.action_size, activatin='softmax'))
+        model.summary()
+        return model
+
+    def optimizer(self):
+        action = K.placeholder(shape=[None, 5])
+        discounted_rewards = K.placeholder(shape=[None, ])
+
+        action_prob = K.sum(action * self.model.output, axis=1)
+        cross_entropy = K.log(action_prob) * discounted_rewards
+        loss = K.sum(cross_entropy)
+
+        optimizer = Adam(lr=self.learning_rate)
+        updates = optimizer.get_updates(self.model.trainable_weights, [], loss)
+
+        train = K.function(
+            [eslf.model.input, action, discounted_rewards], [],
+            updates=updates)
+
+        return train
