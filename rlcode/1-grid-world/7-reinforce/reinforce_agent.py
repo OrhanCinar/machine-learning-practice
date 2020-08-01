@@ -50,3 +50,7 @@ class Reinforcement:
             updates=updates)
 
         return train
+
+    def get_action(self, state):
+        policy = self.model.predict(state)[0]
+        return np.random.choice(self.action_size, 1, p=policy[0])
