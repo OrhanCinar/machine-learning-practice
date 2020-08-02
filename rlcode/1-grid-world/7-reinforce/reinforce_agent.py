@@ -21,7 +21,7 @@ class Reinforcement:
 
         self.model = self.build_model()
         self.optimizer = self.optimizer()
-        self.states, self.actions, self.rewadrs = [], [], []
+        self.states, self.actions, self.rewards = [], [], []
 
         if self.load_model:
             self.model.load_weights('./save_model/reinforce_trained.h5')
@@ -54,3 +54,66 @@ class Reinforcement:
     def get_action(self, state):
         policy = self.model.predict(state)[0]
         return np.random.choice(self.action_size, 1, p=policy[0])
+
+    def discount_rewards(self, rewards):
+        discounted_rewards = np.zeros_like(rewards)
+        running_add = 0
+        for t in reversed(range(0, len(rewards))):
+            running_add = running_add * self.discount_factor + rewards[t]
+            discounted_rewards[t] = running_add
+        return discounted_rewards
+
+    def append_sample(self, state, action, reward):
+        self.states.append(state[0])
+        self.rewards.append(reward)
+        act = np.zeros(self.action_size)
+        act[action] = 1
+        self.actions.append(act)
+
+    def train_model(self):
+        discount_rewards = np.float32(self.discount_rewards(self.rewards))
+        discount_rewards -= np.mean(discount_rewards)
+        discount_rewards / = np.std(discount_rewards)
+
+        self.optimizer([self.states, self.actions, discount_rewards])
+        self.states, self.actions, self.rewards = [], [], []
+
+
+if __name__ == "__main__":
+    env = Env()
+    agent = ReinforceAgent()
+
+    global_step = 0
+    scores, episodes = [], []
+
+    for e in range(EPISODES):
+        done = False
+        score = 0
+        # fresh env
+        state = env.reset()
+        state = np.reshape(state, [1, 15])
+
+        while not done:
+            global_step += 1
+            # get action for the current state and go one step in environment
+            action = agent.get_action(state)
+            next_state, reward, done = env.step(action)
+            next_state = np.reshape(next_state, [1, 15])
+
+            agent.append_sample(state, action, reward)
+            score += reward
+            state = copy.deepcopy(next_state)
+
+            if done:
+                # update policy neural network for each episode
+                agent.train_model()
+                scores.append(score)
+                episodes.append(e)
+                score = round(score, 2)
+                print("episode:", e, "  score:", score, "  time_step:",
+                      global_step)
+
+        if e % 100 == 0:
+            pylab.plot(episodes, scores, 'b')
+            pylab.savefig("./save_graph/reinforce.png")
+            agent.model.save_weights("./save_model/reinforce.h5")
