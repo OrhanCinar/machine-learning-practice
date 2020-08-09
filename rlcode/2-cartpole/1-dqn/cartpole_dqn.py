@@ -33,3 +33,14 @@ class DQNAgent:
         if self.load_model:
             self.model.load_weigths("./save_model/cartpole_dqn.h5")
 
+    def build_model(self):
+        model = Sequential()
+        model.add(Dense(24, input_dim=self.state_size,
+                        activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(24, activation='relu',
+                        kernel_initializer='he_uniform'))
+        model.add(Dense(self.action_size, activation='linear',
+                        kernel_initializer='he_uniform'))
+        model.summary()
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        return model
