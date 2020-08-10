@@ -10,6 +10,8 @@ from keras.models import Sequential
 
 EPISODES = 300
 
+# https://github.com/rlcode/reinforcement-learning/blob/master/2-cartpole/1-dqn/cartpole_dqn.py
+
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -44,3 +46,19 @@ class DQNAgent:
         model.summary()
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
+
+    def get_action(self):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            q_value = self.model.predict(state)
+            return np.argmax(q_value[0])
+
+    def append_sample(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
