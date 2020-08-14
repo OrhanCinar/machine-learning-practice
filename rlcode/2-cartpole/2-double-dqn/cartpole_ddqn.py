@@ -48,3 +48,109 @@ class DoubleDQNAgent:
         model.summary()
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
+
+    def get_action(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            q_value = self.model.predict(state)
+            return np.argmax(q_value[0])
+
+    def append_simple(self, state, action, reward, next_state, done):
+        self.memory.append(state, action, reward, next_state, done)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+    def train_model(self):
+        if len(self.memory) < self.train_start:
+            return
+
+        batch_size = np.zeros((batch_size, self.state_size))
+        mini_batch = random.sample(self.memory, batch_size)
+
+        update_input = np.zeros((batch_size, self.state_size))
+        update_target = np.zeros((batch_size, self.state_size))
+        action, reward, done = [], [], []
+
+        for i in range(batch_size):
+            update_input[i] = mini_batch[i][0]
+            action.append(mini_batch[i][1])
+            reward.append(mini_batch[i][2])
+            update_target[i] = mini_batch[i][3]
+            done.append(mini_batch[i][4])
+
+        target = self.model.predict(update_input)
+        target_next = self.model.predict(update_target)
+        target_Val = self.target_model.predict(update_target)
+
+        for i in range(self.batch_size):
+            if done[i]:
+                target[i][action[i]] = reward[i]
+            else:
+                a = np.argmax(target_next[i])
+                target[i][action[i]] = reward[i] + \
+                    self.discount_factor * (target_Val[i][a])
+
+        self.model.fit(update_input, target,
+                       batch_size=self.batch_size, epochs=1, verbose=0)
+
+
+if __name__ == "__main__":
+    # In case of CartPole-v1, you can play until 500 time step
+    env = gym.make('CartPole-v1')
+    # get size of state and action from environment
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+
+    agent = DoubleDQNAgent(state_size, action_size)
+
+    scores, episodes = [], []
+
+    for e in range(EPISODES):
+        done = False
+        score = 0
+        state = env.reset()
+        state = np.reshape(state, [1, state_size])
+
+        while not done:
+            if agent.render:
+                env.render()
+
+            # get action for the current state and go one step in environment
+            action = agent.get_action(state)
+            next_state, reward, done, info = env.step(action)
+            next_state = np.reshape(next_state, [1, state_size])
+            # if an action make the episode end, then gives penalty of -100
+            reward = reward if not done or score == 499 else -100
+
+            # save the sample <s, a, r, s'> to the replay memory
+            agent.append_sample(state, action, reward, next_state, done)
+            # every time step do the training
+            agent.train_model()
+            score += reward
+            state = next_state
+
+            if done:
+                # every episode update the target model to be same with model
+                agent.update_target_model()
+
+                # every episode, plot the play time
+                score = score if score == 500 else score + 100
+                scores.append(score)
+                episodes.append(e)
+                pylab.plot(episodes, scores, 'b')
+                pylab.savefig("./save_graph/cartpole_ddqn.png")
+                print("episode:", e, "  score:", score, "  memory length:",
+                      len(agent.memory), "  epsilon:", agent.epsilon)
+
+                # if the mean of scores of last 10 episode is bigger than 490
+                # stop training
+                if np.mean(scores[-min(10, len(scores)):]) > 490:
+                    sys.exit()
+
+        # save the model
+        if e % 50 == 0:
+            agent.model.save_weights("./save_model/cartpole_ddqn.h5")
