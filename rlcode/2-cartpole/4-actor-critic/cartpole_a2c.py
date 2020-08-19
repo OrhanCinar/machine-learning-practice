@@ -29,3 +29,14 @@ class A2CAgent:
         if self.load_model:
             self.actor.load_weights("./save_model/cartpole_actor.h5")
             self.critic.load_weights("./save_model/cartpole_critic.h5")
+
+    def build_actor(self):
+        actor = Sequential()
+        actor.add(Dense(24, input_dim=self.state_size,
+                        activation='relu', kernel_initializer='he_uniform'))
+        actor.add(Dense(self.action_size, activation='softmax',
+                        kernel_initializer='he_uniform'))
+        actor.summary()
+        actor.compile(loss='categorical_crossentropy',
+                      optimizer=Adam(lr=self.actor_lr))
+        return actor
