@@ -35,3 +35,29 @@ class A3CAgent:
         self.sess = tf.InteractiveSession()
         K.set_session(self.sess)
         self.sess.run(tf.global_variables_initializer())
+
+    def build_model(self):
+        state = Input(batch_shape=(None, self.state_size))
+        shared = Dense(self.hidden1, input_dim=self.state_size,
+                       activation='relu',
+                       kernel_initializer='glorot_uniform')(state)
+
+        actor_hidden = Dense(self.hidden2, activation='relu',
+                             kernel_initializer='glorot_uniform')(shared)
+        action_prob = Dense(self.action_size, activation='softmax',
+                            kernel_initializer='glorot_uniform')(actor_hidden)
+
+        value_hidden = Dense(self.hidden2, activation='relu',
+                             kernel_initializer='he_uniform')(shared)
+        state_value = Dense(1, activation='linear',
+                            kernel_initializer='he_uniform')(value_hidden)
+
+        actor = Model(inputs=state, outputs=action_prob)
+        critic = Model(inputs=state, outputs=state_value)
+
+        actor._make_predict_function()
+        critic._make_predict_function()
+
+        actor.summary()
+        critic.summary()
+        return actor, critic
