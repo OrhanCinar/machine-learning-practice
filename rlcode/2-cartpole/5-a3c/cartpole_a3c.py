@@ -61,3 +61,23 @@ class A3CAgent:
         actor.summary()
         critic.summary()
         return actor, critic
+
+    def actor_optimizer(self):
+        action = K.placeholder(shape=(None, self.action_size))
+        advantages = K.placeholder(shape=(None, ))
+
+        policy = self.actor.output
+
+        good_prob = K.sum(action*policy, axis=1)
+        eligibility = K.log(good_prob + 1e-10) * K.stop_gradient(advantages)
+        loss = K.sum(eligibility)
+
+        entropy = K.sum(policy * K.log(policy + 1e-10), axis=1)
+        actor_loss = loss + 0.01 * entropy
+
+        optimizer = Adam(lr=self.actor_lr)
+        updates = optimizer.get_updates(
+            self.actor.trainable_weigths, [], actor_loss)
+        train = K.function(
+            [self.actor.input, action, advantages], [], updates=updates)
+        return train
