@@ -81,3 +81,15 @@ class A3CAgent:
         train = K.function(
             [self.actor.input, action, advantages], [], updates=updates)
         return train
+
+    def critic_optimizer(self):
+        discounted_reward = K.placeholder(shape=(None, ))
+        value = self.ciritic.output
+
+        loss = K.mean(K.square(discounted_reward - value))
+        optimizer = Adam(lr=self.ciritic_lr)
+        updates = optimizer.get_updates(
+            self.critic.trainable_weights, [], loss)
+        train = K.function(
+            [self.critic.input, discounted_reward], [], updates=updates)
+        return train
