@@ -87,9 +87,75 @@ class A3CAgent:
         value = self.ciritic.output
 
         loss = K.mean(K.square(discounted_reward - value))
-        optimizer = Adam(lr=self.ciritic_lr)
+        optimizer = Adam(lr=self.critic_lr)
         updates = optimizer.get_updates(
             self.critic.trainable_weights, [], loss)
         train = K.function(
             [self.critic.input, discounted_reward], [], updates=updates)
         return train
+
+    def train(self):
+        agents = [Agent(i, self.actor, self.critic, self.optimizer,
+                        self.env_name,
+                        self.discount_factor, self.action_size, self.state_size)
+                  for i in range(self.threads)]
+
+        for agent in agents:
+            agent.start()
+
+        while True:
+            time.sleep(20)
+
+        plot = scores[:]
+        pylab.plot(range(len(plot)), plot, 'b')
+        pylab.savefig("./save_graph/cartpole_a3c.png")
+
+        self.save_model('./save_model/cartpole_a3c.h5')
+
+    def save_model(self, name):
+        self.actor.save_weights(name + '_actor.h5')
+        self.critic.save_weights(name + '_critic.h5')
+
+    def load_model(self, name):
+        self.actor.load_weights(name + '_actor.h5')
+        self.critic.load_weights(name + '_critic.h5')
+
+
+class Agent(threading.Thread):
+    def __init__(self, index, actor, critic, optimizer, env_name,
+                 discount_factor, action_size, state_size):
+        threading.Thread.__init__(self)
+
+        self.states = []
+        self.rewards = []
+        self.actions = []
+
+        self.index = index
+        self.actor = actor
+        self.critic = critic
+        self.optimizer = optimizer
+        self.env_name = env_name
+        self.discount_factor = discount_factor
+        self.action_size = action_size
+        self.state_size = state_size
+
+    def run(self):
+        global episode
+        env = gym.make(self.env_name)
+        while episode < EPISODES:
+            state = env.reset()
+            score = 0
+            while True:
+                action = self.get_action(state)
+                next_state, reward, done, _ = env.step(action)
+                score += reward
+
+                self.memory(state, action, reward)
+                state = next_state
+
+                if done:
+                    episode += 1
+                    print("episode: ", episode, "/ score : ", score)
+                    scores.append(score)
+                    self.train_episode(score != 500)
+                    break
