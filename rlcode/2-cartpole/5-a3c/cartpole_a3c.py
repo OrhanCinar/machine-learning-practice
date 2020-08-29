@@ -77,14 +77,14 @@ class A3CAgent:
 
         optimizer = Adam(lr=self.actor_lr)
         updates = optimizer.get_updates(
-            self.actor.trainable_weigths, [], actor_loss)
+            self.actor.trainable_weights, [], actor_loss)
         train = K.function(
             [self.actor.input, action, advantages], [], updates=updates)
         return train
 
     def critic_optimizer(self):
         discounted_reward = K.placeholder(shape=(None, ))
-        value = self.ciritic.output
+        value = self.critic.output
 
         loss = K.mean(K.square(discounted_reward - value))
         optimizer = Adam(lr=self.critic_lr)
@@ -97,7 +97,8 @@ class A3CAgent:
     def train(self):
         agents = [Agent(i, self.actor, self.critic, self.optimizer,
                         self.env_name,
-                        self.discount_factor, self.action_size, self.state_size)
+                        self.discount_factor, self.action_size,
+                        self.state_size)
                   for i in range(self.threads)]
 
         for agent in agents:
@@ -159,3 +160,23 @@ class Agent(threading.Thread):
                     scores.append(score)
                     self.train_episode(score != 500)
                     break
+
+    def discount_rewards(self, rewards, done=True):
+        discounted_rewards = np.zeros_like(rewards)
+        running_add = 0
+
+        if not done:
+            running_add = self.critic.predict(np.reshape(self.states[-1],
+                                                         (1, self.state_size)))[0]
+
+        for t in reversed(range(0, len(rewards))):
+            running_add = running_add * self.discount_factor + rewards[t]
+            discounted_rewards[t] = running_add
+        return discounted_rewards
+
+    def memory(self, state, action, reward):
+        self.states.append(state)
+        act = np.zeros(self.action_size)
+        act[action] = 1
+        self.actions.append(act)
+        self.rewards.append(reward)
