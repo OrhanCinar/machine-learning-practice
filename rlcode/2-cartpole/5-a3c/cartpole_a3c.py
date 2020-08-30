@@ -166,8 +166,9 @@ class Agent(threading.Thread):
         running_add = 0
 
         if not done:
-            running_add = self.critic.predict(np.reshape(self.states[-1],
-                                                         (1, self.state_size)))[0]
+            running_add = self.critic.predict(
+                np.reshape(self.states[-1],
+                           (1, self.state_size)))[0]
 
         for t in reversed(range(0, len(rewards))):
             running_add = running_add * self.discount_factor + rewards[t]
@@ -180,3 +181,32 @@ class Agent(threading.Thread):
         act[action] = 1
         self.actions.append(act)
         self.rewards.append(reward)
+
+    def train_episode(self, done):
+        discounted_rewards = self.discount_rewards(self.rewards, done)
+
+        values = self.critic.predict(np.array(self.states))
+        values = np.reshape(values, len(values))
+
+        advantages = discounted_rewards - values
+
+        self.optimizer[0]([self.states, self.actions, advantages])
+        self.optimizer[1]([self.states, discounted_rewards])
+        self.states, self.actions, self.rewards = [], [], []
+
+    def get_action(self, state):
+        policy = self.actor.predict(np.reshape(state, [1, self.state_size]))[0]
+        return np.random.choice(self.action_size, 1, p=policy)[0]
+
+
+if __name__ == "__main__":
+    env_name = 'CartPole-v1'
+    env = gym.make(env_name)
+
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+
+    env.close()
+
+    global_agent = A3CAgent(state_size, action_size, env_name)
+    global_agent.train()
