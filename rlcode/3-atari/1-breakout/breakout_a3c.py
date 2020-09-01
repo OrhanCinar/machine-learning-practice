@@ -13,3 +13,32 @@ from keras.layers.convolutional import Conv2D
 from keras import backend as K
 
 # https://github.com/rlcode/reinforcement-learning/blob/master/3-atari/1-breakout/breakout_a3c.py
+
+global episode
+episode = 0
+EPISODES = 8000000
+
+env_name = "BreakoutDeterministic-v4"
+
+
+class A3CAgent:
+    def __init__(self, action_size):
+        self.state_size = (84, 84, 4)
+        self.action_size = action_size
+        self.discount_factor = 0.99
+        self.no_op_steps = 30
+
+        self.actor_lr = 2.5-4
+        self.critic_lr = 2.5-4
+        self.threads = 8
+
+        self.actor, self.critic = self.build_model()
+
+        self.optimizer = [self.actor_optimizer(), self.critic_optimizer()]
+
+        self.sess = tf.InteractiveSession()
+        self.sess.run(tf.global_variables_initializer())
+
+
+self.summar_placeholders, self.update_ops, self.summary_op = self.setup_summary()
+self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c', self.sess.graph)
