@@ -38,7 +38,19 @@ class A3CAgent:
 
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
+        self.summar_placeholders, self.update_ops, self.summary_op = self.setup_summary()
+        self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c', self.sess.graph)
 
+    def train(self):
+        agents = [Agent(self.action_size, self.state_size, [],
+                        self.sess, self.optimizer, self.discount_factor,
+                        [self.summary_op, self.summar_placeholders,
+                         self.update_ops, self.summary_writer]) for _ in range(self.threads)]
 
-self.summar_placeholders, self.update_ops, self.summary_op = self.setup_summary()
-self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c', self.sess.graph)
+        for agent in agents:
+            time.sleep(1)
+            agent.start()
+
+        while True:
+            time.sleep(60*10)
+            self.save_model("./save_model/breakout_a3c")
