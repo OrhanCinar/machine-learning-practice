@@ -54,3 +54,23 @@ class A3CAgent:
         while True:
             time.sleep(60*10)
             self.save_model("./save_model/breakout_a3c")
+
+    def build_model(self):
+        input = Input(shape=self.state_size)
+        conv = Conv2D(16, (8, 8), strides=(4, 4), activation='relu')(input)
+        conv = Conv2D(32, (4, 4), strides=(2, 2), activation='relu')(conv)
+        conv = Flatten()(conv)
+        fc = Dense(256, activation='relu')(conv)
+        policy = Dense(self.action_size, activation='softmax')(fc)
+        value = Dense(1, activation='linear')(fc)
+
+        actor = Model(input=input, outputs=policy)
+        critic = Model(input=input, outputs=value)
+
+        actor._make_predict_function()
+        critic._make_predict_function()
+
+        actor.summary()
+        critic.summary()
+
+        return actor, critic
