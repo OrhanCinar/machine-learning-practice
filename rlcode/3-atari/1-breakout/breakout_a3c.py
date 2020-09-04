@@ -86,3 +86,10 @@ class A3CAgent:
 
         entropy = K.sum(policy * K.log(policy + 1e-10), axis=1)
         entropy = K.sum(entropy)
+
+        loss = actor_loss + 0.01 * entropy
+        optimizer = RMSprop(lr=self.actor_lr, rho=0.99, epsilon=0.01)
+        updates = optimizer.get_updates(self.actor.trainable_weights, [], loss)
+        train = K.function([self.actor.input, action, advantages], [loss], updates=updates)
+
+        return train
