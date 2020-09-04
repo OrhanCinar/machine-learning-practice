@@ -74,3 +74,15 @@ class A3CAgent:
         critic.summary()
 
         return actor, critic
+
+    def actor_optimizer(self):
+        action = K.placeholder(shape=[None, self.action_size])
+        advantages = K.placeholder(shape=[None, ])
+        policy = self.actor.output
+
+        good_prob = K.sum(action * policy, axis=1)
+        eligibility = K.log(good_prob + 1e-10) * advantages
+        actor_loss = -K.sum(eligibility)
+
+        entropy = K.sum(policy * K.log(policy + 1e-10), axis=1)
+        entropy = K.sum(entropy)
