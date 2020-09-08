@@ -90,6 +90,18 @@ class A3CAgent:
         loss = actor_loss + 0.01 * entropy
         optimizer = RMSprop(lr=self.actor_lr, rho=0.99, epsilon=0.01)
         updates = optimizer.get_updates(self.actor.trainable_weights, [], loss)
-        train = K.function([self.actor.input, action, advantages], [loss], updates=updates)
+        train = K.function([self.actor.input, action, advantages], [loss],
+                           updates=updates)
 
+        return train
+
+    def critic_optimizer(self):
+        discounted_reward = K.placeholder(shape=(None, ))
+        value = self.critic.output
+        loss = K.mean(K.square(discounted_reward - value))
+
+        optimizer = RMSprop(lr=self.critic_lr, rho=0.99, epsilon=0.01)
+        updates = optimizer.get_updates(self.critic.trainable_weights, [], loss)
+        train = K.function([self.critic.input, discounted_reawrd], [loss],
+                           updates=updates)
         return train
