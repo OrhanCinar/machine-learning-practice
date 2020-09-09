@@ -101,7 +101,31 @@ class A3CAgent:
         loss = K.mean(K.square(discounted_reward - value))
 
         optimizer = RMSprop(lr=self.critic_lr, rho=0.99, epsilon=0.01)
-        updates = optimizer.get_updates(self.critic.trainable_weights, [], loss)
-        train = K.function([self.critic.input, discounted_reawrd], [loss],
+        updates = optimizer.get_updates(self.critic.trainable_weights, [],
+                                        loss)
+        train = K.function([self.critic.input, discounted_reward], [loss],
                            updates=updates)
         return train
+
+    def load_model(self, name):
+        self.actor.load_weights(name + "_actor.h5")
+        self.critic.load_weights(name + "_critic.h5")
+
+    def save_model(self, name):
+        self.actor.save_weights(name + "_actor.h5")
+        self.critic.save_weights(name + "_critic.h5")
+
+    def setup_summary(self):
+        episode_total_reward = tf.Variable(0.)
+        episode_avg_max_q = tf.Variable(0.)
+        episode_duration = tf.Variable(0.)
+
+        tf.summary.scalar('Total Reward/Episode', episode_total_reward)
+        tf.summary.scalar('Average Max Prob/Episode', episode_avg_max_q)
+        tf.summary.scalar('Duration/Episode', episode_duration)
+
+        summary_vars = [episode_total_reward, episode_avg_max_q, episode_duration]
+        summary_placeholders = [tf.placeholders(tf.float32) for _ in range(len(summary_vars))]
+        update_ops = [summary_vars[i].assign(summary_placeholders[i] for i in range(summary_vars))]
+        summary_ops = tf.summary.merge_all()
+        return summary_placeholders, update_ops, summary_op
