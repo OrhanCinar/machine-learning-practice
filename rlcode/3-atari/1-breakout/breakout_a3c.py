@@ -38,14 +38,17 @@ class A3CAgent:
 
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
-        self.summar_placeholders, self.update_ops, self.summary_op = self.setup_summary()
-        self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c', self.sess.graph)
+        self.summar_placeholders, self.update_ops,
+        self.summary_op = self.setup_summary()
+        self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c',
+                                                    self.sess.graph)
 
     def train(self):
         agents = [Agent(self.action_size, self.state_size, [],
                         self.sess, self.optimizer, self.discount_factor,
                         [self.summary_op, self.summar_placeholders,
-                         self.update_ops, self.summary_writer]) for _ in range(self.threads)]
+                         self.update_ops, self.summary_writer])
+                  for _ in range(self.threads)]
 
         for agent in agents:
             time.sleep(1)
@@ -124,8 +127,34 @@ class A3CAgent:
         tf.summary.scalar('Average Max Prob/Episode', episode_avg_max_q)
         tf.summary.scalar('Duration/Episode', episode_duration)
 
-        summary_vars = [episode_total_reward, episode_avg_max_q, episode_duration]
-        summary_placeholders = [tf.placeholders(tf.float32) for _ in range(len(summary_vars))]
-        update_ops = [summary_vars[i].assign(summary_placeholders[i] for i in range(summary_vars))]
+        summary_vars = [episode_total_reward, episode_avg_max_q,
+                        episode_duration]
+        summary_placeholders = [tf.placeholders(tf.float32)
+                                for _ in range(len(summary_vars))]
+        update_ops = [summary_vars[i].assign(summary_placeholders[i]
+                                             for i in range(summary_vars))]
         summary_ops = tf.summary.merge_all()
         return summary_placeholders, update_ops, summary_op
+
+
+class Agent(threading.Thread):
+    def __init__(self, action_size, state_size, model, sess, optimizer, discount_factor, summary_ops):
+        threading.Thread.__init__(self)
+
+        self.action_size = action_size
+        self.state_size = state_size
+        self.actor, self.critic = model
+        self.sess = sess
+        self.optimizer = optimizer
+        self.discount_factor = discount_factor
+        self.summary_op, self.summar_placeholders, self.update_ops, self.summary_writer = summary_ops
+
+        self.states, self.actions, self.rewards = [], [], []
+
+        self.local_actor = self.localcritic = self.build_model()
+
+        self.avg_p_max = 0
+        self.avg_loss = 0
+
+        self.t_max = 20
+        self.t = 0
