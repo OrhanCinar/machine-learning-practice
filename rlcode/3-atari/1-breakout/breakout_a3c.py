@@ -38,15 +38,15 @@ class A3CAgent:
 
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
-        self.summar_placeholders, self.update_ops,
+        self.summary_placeholders, self.update_ops,
         self.summary_op = self.setup_summary()
-        self.summary_writer = tf.summary.FileWriter('summary/breackout_a3c',
+        self.summary_writer = tf.summary.FileWriter('summary/breakout_a3c',
                                                     self.sess.graph)
 
     def train(self):
         agents = [Agent(self.action_size, self.state_size, [],
                         self.sess, self.optimizer, self.discount_factor,
-                        [self.summary_op, self.summar_placeholders,
+                        [self.summary_op, self.summary_placeholders,
                          self.update_ops, self.summary_writer])
                   for _ in range(self.threads)]
 
@@ -131,14 +131,16 @@ class A3CAgent:
                         episode_duration]
         summary_placeholders = [tf.placeholders(tf.float32)
                                 for _ in range(len(summary_vars))]
-        update_ops = [summary_vars[i].assign(summary_placeholders[i]
-                                             for i in range(summary_vars))]
-        summary_ops = tf.summary.merge_all()
+        update_ops = [summary_vars[i].assign(summary_placeholders[i])
+                      for i in range(len(summary_vars))]
+        summary_op = tf.summary.merge_all()
+
         return summary_placeholders, update_ops, summary_op
 
 
 class Agent(threading.Thread):
-    def __init__(self, action_size, state_size, model, sess, optimizer, discount_factor, summary_ops):
+    def __init__(self, action_size, state_size, model, sess, optimizer,
+                 discount_factor, summary_ops):
         threading.Thread.__init__(self)
 
         self.action_size = action_size
@@ -147,7 +149,7 @@ class Agent(threading.Thread):
         self.sess = sess
         self.optimizer = optimizer
         self.discount_factor = discount_factor
-        self.summary_op, self.summar_placeholders, self.update_ops, self.summary_writer = summary_ops
+        self.summary_op, self.summary_placeholders, self.update_ops, self.summary_writer = summary_ops
 
         self.states, self.actions, self.rewards = [], [], []
 
@@ -158,3 +160,84 @@ class Agent(threading.Thread):
 
         self.t_max = 20
         self.t = 0
+
+    def run(self):
+        global episode
+
+        env = gym.make(env_name)
+        step = 0
+
+        while episode < EPISODES:
+            done = False
+            dead = False
+            score, start_life = 0, 5
+            observe = env.reset()
+            next_observe = observe
+
+            for _ in range(random.randint(1, 30)):
+                observe = next_observe
+                next_observe, _, _, _ = env.step(1)
+
+        state = pre_processing(next_observe, observe)
+        history = np.stack((state, state, state, state), axis=2)
+        history = np.reshape([history], (1, 84, 84, 4))
+
+        while not done:
+            step += 1
+            self.t += 1
+            observe = next_observe
+            action, policy = self.get_action(history)
+
+            if action == 0:
+                real_action = 1
+            elif action == 1:
+                real_action = 2
+            else:
+                real_action = 3
+
+            if dead:
+                action = 0
+                real_action = 1
+                dead = False
+
+            next_observe, reward, done, info = env.step(real_action)
+            next_state = pre_processing(next_observe, observe)
+            next_state = np.reshape([next_state], (1, 84, 84, 1))
+            next_history = np.append(next_state, history[:, :, :, :3], axis=3)
+
+            self.avg_p_max += np.max(self.actor.predict(np.float32(history/255.)))
+
+            if start_life > info['ale.lives']:
+                dead = True
+                start_life = info['ale.lives']
+
+            score += reward
+            reward = np.clip(reward, -1., 1.)
+
+            self.memory(history, action, reward)
+
+            if dead:
+                history = np.stack((next_state, next_state, next_state), axis=2)
+                history = np.reshape([history], (1, 84, 84, 4))
+            else:
+                history = next_history
+
+            if self.t >= self.t_max or done:
+                self.train_model(done)
+                self.update_localmodel()
+                self.t = 0
+
+            if done:
+                episode += 1
+                print("episode:", episode, "  score:", score, "  step:", step)
+
+                stats = [score, self.avg_p_max / float(step), step]
+
+                for i in range(len(stats)):
+                    self.sess.run(self.update_ops[i], feed_dict={self.summary_placeholders[i]: float(stats[i])})
+
+                summary_str = self.sess.run(self.summary_op)
+                self.summary_writer.add_summary(summary_str, episode+1)
+                self.avg_p_max = 0
+                self.avg_loss = 0
+                step = 0
