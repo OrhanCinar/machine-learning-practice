@@ -149,7 +149,8 @@ class Agent(threading.Thread):
         self.sess = sess
         self.optimizer = optimizer
         self.discount_factor = discount_factor
-        self.summary_op, self.summary_placeholders, self.update_ops, self.summary_writer = summary_ops
+        self.summary_op, self.summary_placeholders,
+        self.update_ops, self.summary_writer = summary_ops
 
         self.states, self.actions, self.rewards = [], [], []
 
@@ -234,10 +235,23 @@ class Agent(threading.Thread):
                 stats = [score, self.avg_p_max / float(step), step]
 
                 for i in range(len(stats)):
-                    self.sess.run(self.update_ops[i], feed_dict={self.summary_placeholders[i]: float(stats[i])})
+                    self.sess.run(self.update_ops[i],
+                                  feed_dict={self.summary_placeholders[i]: float(stats[i])})
 
                 summary_str = self.sess.run(self.summary_op)
                 self.summary_writer.add_summary(summary_str, episode+1)
                 self.avg_p_max = 0
                 self.avg_loss = 0
                 step = 0
+
+    def discount_reward(self, rewards, done):
+        discounted_rewards = np.zeros_like(rewards)
+        running_add = 0
+
+        if not done:
+            running_add = self.critic.predict(np.float32(self.states[-1] / 255.0))[0]
+
+            for t in reversed(range(0, len(rewards))):
+                running_add = running_add * self.discount_factor + rewards[t]
+                discounted_rewards[t] = running_add
+            return discounted_rewards
