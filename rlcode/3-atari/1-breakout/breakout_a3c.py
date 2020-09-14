@@ -249,9 +249,26 @@ class Agent(threading.Thread):
         running_add = 0
 
         if not done:
-            running_add = self.critic.predict(np.float32(self.states[-1] / 255.0))[0]
+            running_add = self.critic.predict(np.float32(self.states[-1] / 255.))[0]
 
-            for t in reversed(range(0, len(rewards))):
-                running_add = running_add * self.discount_factor + rewards[t]
-                discounted_rewards[t] = running_add
-            return discounted_rewards
+        for t in reversed(range(0, len(rewards))):
+            running_add = running_add * self.discount_factor + rewards[t]
+            discounted_rewards[t] = running_add
+        return discounted_rewards
+
+    def train_model(self, done):
+        discounted_rewards = self.discount_rewards(self.rewards, done)
+
+        states = np.zeros((len(self.states), 84, 84, 4))
+        for i in range(len(self.states)):
+            states[i] = self.states[i]
+
+        states = np.float32(states / 255.)
+
+        values = self.critic.predict(states)
+        values = np.reshape(values, len(values))
+
+        advantages = discounted_rewards - values
+        self.optimizer[0]([states, self.actions, advantages])
+        self.optimizer[1]([states, discounted_rewards])
+        self.states, self.actions, self.rewards = [], [], []
