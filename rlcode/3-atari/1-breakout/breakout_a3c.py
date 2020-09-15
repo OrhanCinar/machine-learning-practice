@@ -149,8 +149,7 @@ class Agent(threading.Thread):
         self.sess = sess
         self.optimizer = optimizer
         self.discount_factor = discount_factor
-        self.summary_op, self.summary_placeholders,
-        self.update_ops, self.summary_writer = summary_ops
+        self.summary_op, self.summary_placeholders, self.update_ops, self.summary_writer = summary_ops
 
         self.states, self.actions, self.rewards = [], [], []
 
@@ -244,7 +243,7 @@ class Agent(threading.Thread):
                 self.avg_loss = 0
                 step = 0
 
-    def discount_reward(self, rewards, done):
+    def discount_rewards(self, rewards, done):
         discounted_rewards = np.zeros_like(rewards)
         running_add = 0
 
@@ -272,3 +271,26 @@ class Agent(threading.Thread):
         self.optimizer[0]([states, self.actions, advantages])
         self.optimizer[1]([states, discounted_rewards])
         self.states, self.actions, self.rewards = [], [], []
+
+    def build_local_model(self):
+        input = Input(shape=self.state_size)
+        conv = Conv2d(16, (8, 8), strides=(4, 4), activation='relu')(input)
+        conv = Conv2d(32, (4, 4), strides=(2, 2), activation='relu')(conv)
+        conv = Flatten()(conv)
+        fc = Dense(256, activation='relu')(conv)
+        policy = Dense(self.action_size, activation='softmax')(fc)
+        value = Dense(1, activation='linear')(fc)
+
+        actor = Model(inputs=input, output=policy)
+        critic = Model(inputs=input, output=value)
+
+        actor._make_predict_function()
+        critic._make_predict_function()
+
+        actor.set_weights(self.actor.get_weights())
+        critic.set_weights(self.critic.get_weights())
+
+        actor.summary()
+        critic.summary()
+
+        return actor, critic
