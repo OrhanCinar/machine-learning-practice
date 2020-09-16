@@ -153,7 +153,7 @@ class Agent(threading.Thread):
 
         self.states, self.actions, self.rewards = [], [], []
 
-        self.local_actor = self.localcritic = self.build_model()
+        self.local_actor = self.local_critic = self.build_model()
 
         self.avg_p_max = 0
         self.avg_loss = 0
@@ -294,3 +294,30 @@ class Agent(threading.Thread):
         critic.summary()
 
         return actor, critic
+
+    def update_localmodel(self):
+        self.local_actor.set_weights(self.actor.get_weights())
+        self.local_critic.set_weights(self.critic.get_weights())
+
+    def get_action(self, history):
+        history = np.float32(history / 255.)
+        policy = self.local_actor.predict(history)[0]
+        action_index = np.random.choice(self.action_size, 1, p=policy)[0]
+        return action_index, policy
+
+    def memory(self, history, action, reward):
+        self.states.append(history)
+        act = np.zeros(self.action_size)
+        act[action] = 1
+        self.actions.append(act)
+        self.rewards.append(reward)
+
+    def pre_processing(next_observe, observe):
+        processed_observe = np.maximum(next_observe, observe)
+        processed_observe = np.uint8(resize(rgb2gray(processed_observe), (84, 84), mode='constant') * 255)
+        return processed_observe
+
+
+if __name__ == "__main__":
+    global_agent = A3CAgent(action_size=3)
+    global_agent.train()
