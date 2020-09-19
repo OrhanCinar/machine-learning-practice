@@ -56,9 +56,9 @@ class DDQAgent:
         a = K.placeholder(shape=(None, ), dtype='int32')
         y = K.placeholder(shape=(None, ), dtype='float32')
 
-        py_x, self.model.output
+        py_x = self.model.output
 
-        a_one_hot = K.one_hot(a, self.action.size)
+        a_one_hot = K.one_hot(a, self.action_size)
         q_value = K.sum(py_x * a_one_hot, axis=1)
         error = K.abs(y-q_value)
 
@@ -70,3 +70,16 @@ class DDQAgent:
         updates = optimizer.get_updates(self.model.trainable_weights, [], loss)
         train = K.function([self.model.input, a, y], [loss], updates=updates)
         return train
+
+    def build_model(self):
+        model = Sequential()
+        model.add(Conv2D(32, (8, 8), strides=(4, 4), activation='relu',
+                         input_shape=self.state_size))
+        model.add(Conv2D(64, (4, 4), strides=(2, 2), activation='relu'))
+        model.add(Conv2D(64, (3, 3), strides=(1, 1), activation='relu'))
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(Dense(self.action_size))
+        model.summary()
+
+        return model
