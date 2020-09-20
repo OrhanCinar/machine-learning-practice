@@ -83,3 +83,14 @@ class DDQAgent:
         model.summary()
 
         return model
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
+
+    def get_action(self, history):
+        history = np.float32(history / 255.0)
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            q_value = self.model.predict(history)
+            return np.argmax(q_value[0])
