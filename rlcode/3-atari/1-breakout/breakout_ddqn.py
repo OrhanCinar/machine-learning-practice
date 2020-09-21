@@ -94,3 +94,6 @@ class DDQAgent:
         else:
             q_value = self.model.predict(history)
             return np.argmax(q_value[0])
+
+    def replay_memory(self, history, action, reward, next_history, dead):
+        self.memory.append((history, action, reward, next_history, dead))
