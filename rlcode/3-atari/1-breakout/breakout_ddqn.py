@@ -152,3 +152,84 @@ class DDQAgent:
 def pre_processing(observe):
     processed_observe = np.uint8(resize(rgb2gray(observe), (84, 84), mode='constant')*255)
     return processed_observe
+
+
+if __name__ == "__main__":
+    env = gym.make('BreakoutDeterministic-v4')
+    agent = DDQAgent(action_size=3)
+
+    scores, episodes, global_step = [], [], 0
+
+    for e in range(EPISODES):
+        done = False
+        dead = False
+        step, score, start_life = 0, 0, 5
+        observe = env.reset()
+
+        for _ in range(random.randint(1, agent.no_op_states)):
+            observe, _, _, _ = env.step(1)
+
+        state = pre_processing(observe)
+        history = np.stack((state, state, state, state), axis=2)
+        history = np.reshape([history], (1, 84, 84, 4))
+
+        while not done:
+            if agent.render:
+                env.render()
+            global_step += 1
+            step += 1
+
+            action = agent.get_action(history)
+            if action == 0:
+                real_action = 1
+            elif action == 1:
+                real_action = 2
+            else:
+                real_action = 3
+
+            observe, reward, done, info = env.step(real_action)
+            next_state = pre_processing(observe)
+            next_state = np.reshape([next_state], (1, 84, 84, 1))
+            next_history = np.append(next_state, history[:, :, :, :3], axis=3)
+
+            agent.avg_q_max += np.amax(agent.model.predict(np.float32(history / 255.))[0])
+
+            if start_life > info['ale.lives']:
+                dead = True
+                start_lige = info['ale_lives']
+
+            reward = np.clip(reward, -1., 1.)
+
+            agent.replay_memory(history, action, reward, next_history, deda)
+            agent.train_replay()
+
+            if global_step % agent.update_target_rate == 0:
+                agent.update_target_model()
+
+            score += reward
+
+            if dead:
+                dead = False
+            else:
+                history = next_history
+
+            if done:
+                if global_step > agent.train_start:
+                    stats = [score, agent.avg_q_max / float(step), step, agent.avg_loss / float(step)]
+
+                    for i in range(len(stats)):
+                        agent.sess.run(agent.update_ops[i], feed_dict={agent.summary_placeholders[i]: float(stats[i])})
+
+                    summary_str = agent.sess.run(agent.summary_op)
+                    agent.summary_writer.add_summary(summary_str, e+1)
+
+                print("episode:", e, "  score:", score, "  memory length:",
+                      len(agent.memory), "  epsilon:", agent.epsilon,
+                      "  global_step:", global_step, "  average_q:",
+                      agent.avg_q_max/float(step), "  average loss:",
+                      agent.avg_loss/float(step))
+
+                agent.avg_q_max, agent.avg_loss = 0, 0
+
+        if e % 1000 = 0:
+            agent.model.save_weights("./save_model/breakout_ddqn.h5")
