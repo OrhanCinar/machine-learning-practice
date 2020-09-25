@@ -27,7 +27,8 @@ class DDQAgent:
         self.epsilon = 1.
         self.epsilon_start, self.epsilon_end = 1.0, 0.1
         self.exploration_steps = 1000000.
-        self.epsilon_decay_step = (self.epsilon_start - self.epsilon_end) / self.exploration_steps
+        self.epsilon_decay_step = (
+            self.epsilon_start - self.epsilon_end) / self.exploration_steps
 
         self.batch_size = 32
         self.train_start = 50000
@@ -46,8 +47,10 @@ class DDQAgent:
         K.set_session(self.sess)
 
         self.avg_q_max, self.avg_loss = 0, 0
-        self.summary_placeholders, self.update_ops, self.summary_op = self.setup_summary()
-        self.summary_writer = tf.summary.FileWriter('summary/breakout_ddqn', self.sess_graph)
+        self.summary_placeholders, self.update_ops,
+        self.summary_op = self.setup_summary()
+        self.summary_writer = tf.summary.FileWriter(
+            'summary/breakout_ddqn', self.sess_graph)
         self.sess.run(tf.global_variables_initializer())
 
         if self.load_model:
@@ -107,8 +110,12 @@ class DDQAgent:
 
         mini_batch = random.sample(self.memory, self.batch_size)
 
-        history = np.zeros((self.batch_size, self.state_size[0], self.state_size[1], self.state_size[2]))
-        next_history = np.zeros((self.batch_size, self.state_size[0], self.state_size[1], self.state_size[2]))
+        history = np.zeros(
+            (self.batch_size, self.state_size[0], self.state_size[1],
+             self.state_size[2]))
+        next_history = np.zeros(
+            (self.batch_size, self.state_size[0], self.state_size[1],
+             self.state_size[2]))
         target = np.zeros((self.batch_size))
         action, reward, dead = [], [], []
 
@@ -126,7 +133,8 @@ class DDQAgent:
             if dead[i]:
                 target[i] = reward[i]
             else:
-                target[i] = reward[i] + self.discount_factor * target_value[i][np.argmax(value[i])]
+                target[i] = reward[i] + self.discount_factor * \
+                    target_value[i][np.argmax(value[i])]
 
         loss = self.optimizer([history, action, target])
         self.avg_loss += loss[0]
@@ -142,15 +150,19 @@ class DDQAgent:
         tf.summary.scalar('Duration/Episode', episode_duration)
         tf.summary.scalar('Average Loss/Episode', episode_avg_loss)
 
-        summary_vars = [episode_total_reward, episode_avg_max_q, episode_duration, episode_avg_loss]
-        summary_placeholders = [tf.placeholder(tf.float32) for _ in range(len(summary_vars))]
-        update_ops = [summary_vars[i].assign(summary_placeholders[i]) for i in range(len(summary_vars))]
+        summary_vars = [episode_total_reward,
+                        episode_avg_max_q, episode_duration, episode_avg_loss]
+        summary_placeholders = [tf.placeholder(
+            tf.float32) for _ in range(len(summary_vars))]
+        update_ops = [summary_vars[i].assign(
+            summary_placeholders[i]) for i in range(len(summary_vars))]
         summary_op = tf.summary.merge_all()
         return summary_placeholders, update_ops, summary_op
 
 
 def pre_processing(observe):
-    processed_observe = np.uint8(resize(rgb2gray(observe), (84, 84), mode='constant')*255)
+    processed_observe = np.uint8(
+        resize(rgb2gray(observe), (84, 84), mode='constant')*255)
     return processed_observe
 
 
@@ -192,7 +204,8 @@ if __name__ == "__main__":
             next_state = np.reshape([next_state], (1, 84, 84, 1))
             next_history = np.append(next_state, history[:, :, :, :3], axis=3)
 
-            agent.avg_q_max += np.amax(agent.model.predict(np.float32(history / 255.))[0])
+            agent.avg_q_max += np.amax(
+                agent.model.predict(np.float32(history / 255.))[0])
 
             if start_life > info['ale.lives']:
                 dead = True
@@ -215,10 +228,13 @@ if __name__ == "__main__":
 
             if done:
                 if global_step > agent.train_start:
-                    stats = [score, agent.avg_q_max / float(step), step, agent.avg_loss / float(step)]
+                    stats = [score, agent.avg_q_max /
+                             float(step), step, agent.avg_loss / float(step)]
 
                     for i in range(len(stats)):
-                        agent.sess.run(agent.update_ops[i], feed_dict={agent.summary_placeholders[i]: float(stats[i])})
+                        agent.sess.run(agent.update_ops[i], feed_dict={
+                                       agent.summary_placeholders[i]:
+                                       float(stats[i])})
 
                     summary_str = agent.sess.run(agent.summary_op)
                     agent.summary_writer.add_summary(summary_str, e+1)
@@ -231,5 +247,5 @@ if __name__ == "__main__":
 
                 agent.avg_q_max, agent.avg_loss = 0, 0
 
-        if e % 1000 = 0:
+        if e % 1000 == 0:
             agent.model.save_weights("./save_model/breakout_ddqn.h5")

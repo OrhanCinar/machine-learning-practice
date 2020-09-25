@@ -149,7 +149,8 @@ class Agent(threading.Thread):
         self.sess = sess
         self.optimizer = optimizer
         self.discount_factor = discount_factor
-        self.summary_op, self.summary_placeholders, self.update_ops, self.summary_writer = summary_ops
+        self.summary_op, self.summary_placeholders, self.update_ops,
+        self.summary_writer = summary_ops
 
         self.states, self.actions, self.rewards = [], [], []
 
@@ -205,7 +206,8 @@ class Agent(threading.Thread):
             next_state = np.reshape([next_state], (1, 84, 84, 1))
             next_history = np.append(next_state, history[:, :, :, :3], axis=3)
 
-            self.avg_p_max += np.max(self.actor.predict(np.float32(history/255.)))
+            self.avg_p_max += np.max(
+                self.actor.predict(np.float32(history/255.)))
 
             if start_life > info['ale.lives']:
                 dead = True
@@ -217,7 +219,8 @@ class Agent(threading.Thread):
             self.memory(history, action, reward)
 
             if dead:
-                history = np.stack((next_state, next_state, next_state), axis=2)
+                history = np.stack(
+                    (next_state, next_state, next_state), axis=2)
                 history = np.reshape([history], (1, 84, 84, 4))
             else:
                 history = next_history
@@ -235,7 +238,8 @@ class Agent(threading.Thread):
 
                 for i in range(len(stats)):
                     self.sess.run(self.update_ops[i],
-                                  feed_dict={self.summary_placeholders[i]: float(stats[i])})
+                                  feed_dict={self.summary_placeholders[i]:
+                                             float(stats[i])})
 
                 summary_str = self.sess.run(self.summary_op)
                 self.summary_writer.add_summary(summary_str, episode+1)
@@ -248,7 +252,8 @@ class Agent(threading.Thread):
         running_add = 0
 
         if not done:
-            running_add = self.critic.predict(np.float32(self.states[-1] / 255.))[0]
+            running_add = self.critic.predict(
+                np.float32(self.states[-1] / 255.))[0]
 
         for t in reversed(range(0, len(rewards))):
             running_add = running_add * self.discount_factor + rewards[t]
@@ -314,7 +319,9 @@ class Agent(threading.Thread):
 
     def pre_processing(next_observe, observe):
         processed_observe = np.maximum(next_observe, observe)
-        processed_observe = np.uint8(resize(rgb2gray(processed_observe), (84, 84), mode='constant') * 255)
+        processed_observe = np.uint8(
+            resize(rgb2gray(processed_observe), (84, 84),
+                   mode='constant') * 255)
         return processed_observe
 
 
