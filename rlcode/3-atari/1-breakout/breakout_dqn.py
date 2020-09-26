@@ -49,7 +49,23 @@ class DQNAgent:
         self.sess.run(tf.global_variables_initializer())
 
     def optimizer(self):
-        pass
+        a = K.placeholder(shape=(None,), dtype='int32')
+        y = K.placeholder(shape=(None,), dtype='float32')
+
+        py_x = self.model.output
+
+        a_one_hot = K.one_hot(a, self.action_size)
+        q_value = K.sum(py_x * a_one_hot, axis=1)
+        error = K.abs(y - q_value)
+
+        quadratic_part = K.clip(error, 0.0, 1.0)
+        linear_part = error - quadratic_part
+        loss = K.mean(0.5 * K.square(quatradic_part) + linear_part)
+
+        optimizer = RMSprop(lr=0.00025, epsilon=0.01)
+        updates = optimizer.get_updates(self.model.trainable_weights, [], loss)
+        train = K.function([self.model.input, a, y], [loss], updates=updates)
+        return train
 
     def build_model(self):
         pass
