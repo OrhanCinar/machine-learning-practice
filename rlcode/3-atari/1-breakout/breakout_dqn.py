@@ -23,7 +23,7 @@ class DQNAgent:
         self.epsilon = 1.
         self.epsilon_start, self.epsilon_end = 1.0, 0.1
         self.exploration_steps = 1000000
-        self.epislon_decay_step = (
+        self.epsilon_decay_step = (
             self.epsilon_start - self.epsilon_end) / self.exploration_steps
 
         self.batch_size = 32
@@ -89,6 +89,47 @@ class DQNAgent:
         else:
             q_value = self.model.predict(history)
             return np.argmax(q_value[0])
+
+    def replay_memory(self, history, action, reward, next_history, dead):
+        self.memory.append((history, action, reward, next_history, dead))
+
+    def train_replay(self):
+        if len(self.memory) < self.train_start:
+            return
+
+        if self.epsilon > self.epsilon_end:
+            self.epsilon -= self.epsilon_decay_step
+
+        mini_batch = random.sample(self.memory, self.batch_size)
+
+        history = np.zeros(
+            (self.batch_size, self.state_size[0], self.state_size[1],
+             self.state_size[2]))
+        next_history = np.zeros(
+            (self.batch_size, self.state_size[0], self.state_size[1],
+             self.state_size[2]))
+
+        target = np.zeros((self.batch_size))
+        action, reward, dead = [], [], []
+
+        for i in range(self.batch_size):
+            history[i] = np.float32(mini_batch[i][0] / 255.)
+            next_history[i] = np.float32(mini_batch[i][3] / 255.)
+            action.append(mini_batch[i][1])
+            reward.append(mini_batch[i][2])
+            dead.append(mini_batch[i][4])
+
+        target_value = self.target_model.predict(next_history)
+
+        for i in range(self.batch_size):
+            if dead[i]:
+                target[i] = reward[i]
+            else:
+                target[i] = reward[i] + self.discount_factor * \
+                    np.amax(target_value[i])
+
+        loss = self.optimizer([history, action, target])
+        self.avg_loss += loss[0]
 
     def setup_summary(self):
         pass
