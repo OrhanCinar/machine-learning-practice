@@ -131,5 +131,23 @@ class DQNAgent:
         loss = self.optimizer([history, action, target])
         self.avg_loss += loss[0]
 
+    def save_model(self, name):
+        self.model.save_weights(name)
+
     def setup_summary(self):
-        pass
+        episode_total_reward = tf.Vairable(0.)
+        episode_avg_max_q = tf.Varible(0.)
+        episode_duration = tf.Variable(0.)
+        episode_avg_loss = tf.Variable(0.)
+
+        tf.summary.scalar('Total Reward/Episode', episode_total_reward)
+        tf.summary.scalar('Average Max Q/Episode', episode_avg_max_q)
+        tf.summary.scalar('Duration/Episode', episode_duration)
+        tf.summary.scalar('Average Loss/Episode', episode_avg_loss)
+
+        summary_vars = [episode_total_reward,
+                        episode_avg_max_q, episode_duration, episode_avg_loss]
+        summary_placeholders = [tf.placeholder(
+            tf.float32) for _ in range(len(summary_vars))]
+        summary_op = tf.summary.merge_all()
+        return summary_placeholders, update_ops, summary_op
