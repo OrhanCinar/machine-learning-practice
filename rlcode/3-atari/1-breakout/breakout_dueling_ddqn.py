@@ -70,4 +70,23 @@ class DuelingDDQNAgent:
         return train
 
     def build_model(self):
-        pass
+        input = Input(shape=self.state_size)
+        shared = Conv2D(32, (8, 8), strides=(4, 4), activation='relu')(input)
+        shared = Conv2D(64, (4, 4), strides=(2, 2), activation='relu')(shared)
+        shared = Conv2D(64, (3, 3), strides=(1, 1), activation='relu')(shared)
+        flatten = Flatten()(shared)
+
+        advantage_fc = Dense(512, activation='relu')(flatten)
+        advantage = Dense(self.action_size)(advantage_fc)
+        advantage = Lambda(lambda: a[:, :] - K.mean(a[:, :], keepdims=True),
+                           output_shape=(self.action_size,))(advantage)
+
+        value_fc = Dense(512, activation='relu')(flatten)
+        value = Dense(1)(value_fc)
+        value = Lambda(lambda s: K.expand_dims(
+            s[:, 0], -1), output_shape=(self.action_size,))(value)
+
+        q_value = merge([value, advantage], mode='sum')
+        model = Model(inputs=input, outputs=q_value)
+        model.summary()
+        return model
