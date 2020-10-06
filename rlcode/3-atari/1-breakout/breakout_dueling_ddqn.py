@@ -90,3 +90,14 @@ class DuelingDDQNAgent:
         model = Model(inputs=input, outputs=q_value)
         model.summary()
         return model
+
+    def update_target(self):
+        self.target_model.set_weights(self.model.get_weights())
+
+    def get_action(self, history):
+        history = np.float32(history / 255.0)
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            q = value = self.model.predict(history)
+            return np.argmax(q_value[0])
