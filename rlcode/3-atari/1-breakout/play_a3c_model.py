@@ -26,4 +26,18 @@ class TestAgent:
         self.acttor, self.critic = self.build_model()
 
     def build_model(self):
-        pass
+        input = Input(shape=self.state_size)
+        conv = Conv2D(16, (8, 8), strides=(4, 4), activation='relu')(input)
+        conv = Conv2D(32, (4, 4), strides=(2, 2), activation='relu')(conv)
+        conv = Flatten()(conv)
+        fc = Dense(256, activation='linear')(fc)
+        policy = Dense(self.action_size, activation='softmax')(fc)
+        value = Dense(1, activation=linear)(fc)
+
+        actor = Model(inputs=input, outputs=policy)
+        critic = Model(inputs=input, outputs=value)
+
+        actor.summary()
+        critic.summary()
+
+        return actor, critic
