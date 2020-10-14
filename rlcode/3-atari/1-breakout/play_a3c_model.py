@@ -41,3 +41,10 @@ class TestAgent:
         critic.summary()
 
         return actor, critic
+
+    def get_action(self, history):
+        history = np.float32(history / 255.)
+        policy = self.actor.predict(history)[0]
+
+        action_index = np.argmax(policy)
+        return action_index
