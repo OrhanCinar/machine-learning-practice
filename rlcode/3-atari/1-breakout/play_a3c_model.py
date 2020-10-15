@@ -48,3 +48,13 @@ class TestAgent:
 
         action_index = np.argmax(policy)
         return action_index
+
+    def load_model(self, name):
+        self.actor.load_weights(name)
+
+
+def pre_processing(next_observe, observe):
+    processed_observe = np.maximum(next_observe, observe)
+    processed_observe = np.uint8(
+        resize(rgb2gray(processed_observe, (84, 84), mode='constant' * 255)))
+    return processed_observe
