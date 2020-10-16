@@ -58,3 +58,68 @@ def pre_processing(next_observe, observe):
     processed_observe = np.uint8(
         resize(rgb2gray(processed_observe, (84, 84), mode='constant' * 255)))
     return processed_observe
+
+
+if __name__ == "__main__":
+    env = gym.make(env_name)
+    agent = TestAgent(action_size=3)
+    agent.load_model("save_model/breakout_a3c_5_actor.h5")
+    step = 0
+
+    while episode < EPISODES:
+        done = False
+        dead = False
+
+        score, start_life = 0, 5
+        observe = = env.reset()
+        next_observe = observe
+
+        for _ in range(random.randint(1, 20)):
+            observe = next_observe
+            next_observe, _, _, _ = env.step(1)
+
+        state = pre_processing(next_observe, observe)
+        history = np.stack((state, state, state, state), axis=2)
+        history = np.reshape([history], (1, 84, 84, 4))
+
+        while not done:
+            env.render()
+            step += 1
+            observe = next_observe
+
+            action = agent.get_action(history)
+
+            if action == 1:
+                fake_action = 2
+            elif action == 2:
+                fake_action = 3
+            else:
+                fake_action = 1
+
+            if dead:
+                fake_action = 1
+                dead = False
+
+            next_observe, reward, done, info = env.step(fake_action)
+
+            next_state = pre_processing(next_observe, observe)
+            next_state = np.reshape([next_state], (1, 84, 84, 1))
+            next_history = np.append(next_state, history[:, :, :, :3], axis=3)
+
+            if start_life > info['ale.lives']:
+                dead = True
+                reward = -1
+                start_life = info['ale.lives']
+
+            score += reward
+
+            if dead:
+                history = np.stack(
+                    (next_state, next_state, next_state, next_state), axis=2)
+            else:
+                history = next_history
+
+            if done:
+                episode += 1
+                print("episode:", episode, "  score:", score, "  step:", step)
+                step = 0
