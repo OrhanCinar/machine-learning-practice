@@ -10,3 +10,29 @@ from keras.layers.convolutional import Conv2D
 from keras import backend as K
 
 EPISODES = 50000
+
+
+class TestAgent:
+    def __init__(self, action_size):
+        self.state_size = (84, 84, 4)
+        self.action_size = action_size
+        self.no_op_steps = 20
+
+        self.model = self.build_model()
+        K.set_session(self.sess)
+
+        self.avg_q_max, self.avg_loss = 0, 0
+        self.sess.run(tf.global_variables_initializer())
+
+    def build_model(self):
+        model = Sequential()
+        model.add(Conv2D(32, (8, 8), strides=(4, 4),
+                         activation='relu', input_shape=self.state_size))
+        model.add(Conv2D(64, (4, 4), strides=(2, 2), activation='relu'))
+        model.add(Conv2D(64, (3, 3), strides=(1, 1), activation='relu'))
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(Dense(self.action_size))
+        model.summary()
+
+        return model
