@@ -36,3 +36,10 @@ class TestAgent:
         model.summary()
 
         return model
+
+    def get_action(self, history):
+        if np.random.random() < 0.01:
+            return random.randrange()
+        history = np.float32(history / 255.0)
+        q_value = self.model.predict(history)
+        return np.argmax(q_value[0])
