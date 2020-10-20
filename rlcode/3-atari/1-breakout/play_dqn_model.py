@@ -43,3 +43,12 @@ class TestAgent:
         history = np.float32(history / 255.0)
         q_value = self.model.predict(history)
         return np.argmax(q_value[0])
+
+    def load_model(self, filename):
+        self.model.load_weights(filename)
+
+
+def pre_processing(observe):
+    processed_observe = np.uint8(
+        resize(rgb2gray(observe), (84, 84), mode='constant') * 255)
+    return processed_observe
