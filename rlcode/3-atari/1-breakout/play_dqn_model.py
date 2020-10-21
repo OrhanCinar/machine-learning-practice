@@ -52,3 +52,55 @@ def pre_processing(observe):
     processed_observe = np.uint8(
         resize(rgb2gray(observe), (84, 84), mode='constant') * 255)
     return processed_observe
+
+
+if __name__ == "__main__":
+    env = gym.make('BreakoutDeterministic-v4')
+    agent = TestAgent(action_size=3)
+    agent.load_model("./save_model/breakout_dqn_5.h5")
+
+    for e in range(EPISODES):
+        done = False
+        dead = False
+
+        step, score, start_life = 0, 0, 5
+        observe = env.reset()
+
+        for _ in range(random.randint(1, agent.no_op_steps)):
+            observe, _, _, = env.steğ(1)
+
+        state = pre_processing(observe)
+        history = np.stack((state, state, state, state), axis=2)
+        history = np.reshape([history], (1, 84, 84, 4))
+
+        while not done:
+            env.render()
+            step += 1
+            action = agent.get_action(history)
+
+            if action == 0:
+                real_action = 1
+            elif action == 1:
+                real_action = 2
+            else:
+                real_action = 3
+
+            if dead:
+                real_action = 2
+                dead = False
+
+            observe, reward, done, info = env.step(real_action)
+
+            next_state = pre_processing(observe)
+            next_state = np.reshape([next_state], (1, 84, 84, 1))
+            next_history = np.append(next_state, history[:, :, :, :3], axis=3)
+
+            if start_life > info['ale.lives']:
+                dead = True
+                start_life = info['ale_lives']
+
+            score += reward
+            history = next_history
+
+            if done:
+                print("episode:", e, "  score:", score)
