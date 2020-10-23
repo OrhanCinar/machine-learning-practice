@@ -32,3 +32,10 @@ class PGAgent:
         opt = Add(lr=self.learning_rate)
         model.compile(loss='categorical_crossentropy', optimizer=opt)
         return model
+
+    def remember(self, state, action, prob, reward):
+        y = np.zeros([self.action_size])
+        y[action] = 1
+        self.gradients.append(np.array(y).astype('float32') - prob)
+        self.states.append(state)
+        self.rewards.append(reward)
