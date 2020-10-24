@@ -23,7 +23,8 @@ class PGAgent:
         model = Sequential()
         model.add(Reshape((1, 80, 60), input_shape=(self.state_size,)))
         model.add(Connvolution2D(32, 6, 6, subsample=(3, 3),
-                                 border_mode='same', activation='relu', init='he_uniform'))
+                                 border_mode='same', activation='relu',
+                                 init='he_uniform'))
 
         model.add(Flatten())
         model.add(Dense(64, activation='relu', init='he_uniform'))
@@ -39,3 +40,11 @@ class PGAgent:
         self.gradients.append(np.array(y).astype('float32') - prob)
         self.states.append(state)
         self.rewards.append(reward)
+
+    def act(self, state):
+        state = state.reshape([1, state.shape[0]])
+        aprob = self.model.predict(state, batch_size=1).flatten()
+        self.probs.append(aprob)
+        prob = aprob / np.sum(aprob)
+        action = np.random.choic(self.action_size, 1, p=prob)[0]
+        return action, prob
