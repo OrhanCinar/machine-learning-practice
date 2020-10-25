@@ -48,3 +48,13 @@ class PGAgent:
         prob = aprob / np.sum(aprob)
         action = np.random.choic(self.action_size, 1, p=prob)[0]
         return action, prob
+
+    def discount_rewards(self, rewards):
+        discount_rewards = np.zeros_like(rewards)
+        running_add = 0
+        for t in reversed(range(0, rewards.size)):
+            if rewards[t] != 0:
+                running_add = 0
+            running_add = running_add * self.gamma + rewards[t]
+            discount_rewards[t] = running_add
+        return discount_rewards
