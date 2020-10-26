@@ -5,6 +5,8 @@ from keras.layers import Dense, Reshape, Flatten
 from keras.optimizers import Adam
 from keras.layers.convolutional import Convolution2D
 
+# https://github.com/rlcode/reinforcement-learning/blob/master/3-atari/2-pong/pong_reinforce.py
+
 
 class PGAgent:
     def __init__(self, state_size, action_size):
@@ -58,3 +60,15 @@ class PGAgent:
             running_add = running_add * self.gamma + rewards[t]
             discount_rewards[t] = running_add
         return discount_rewards
+
+    def train(self):
+        gradients = np.vstack(self.gradients)
+        rewards = np.vstack(self.rewards)
+        rewards = self.discount_rewards(rewards)
+        rewards = rewards / np.std(rewards - np.mean(rewards))
+        gradients *= rewards
+        X = np.squeeze(np.vstack([self.states]))
+        Y = self.probs + self.learning_rate * \
+            np.squeeze(np.vstack([gradients]))
+        self.model.train_on_batch(X, Y)
+        self.states, self.probs, seşf.gradients, self.rewards = [], [], []
