@@ -72,3 +72,9 @@ class PGAgent:
             np.squeeze(np.vstack([gradients]))
         self.model.train_on_batch(X, Y)
         self.states, self.probs, seşf.gradients, self.rewards = [], [], []
+
+    def load(self, name):
+        self.model.load_weights(name)
+
+    def save(self, name):
+        self.model.save_weights(name)
