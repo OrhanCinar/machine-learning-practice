@@ -29,7 +29,15 @@ class DQNAgent:
         self.update_target_model()
 
     def build_model():
-        pass
+        model = Sequential()
+        model.add(Dense(32, input_dim=self.state_size,
+                        activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(16, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(self.action_size, activation='linear',
+                        kernel_initializer='he_uniform'))
+        model.summary()
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        return model
 
     def update_target_model():
         pass
