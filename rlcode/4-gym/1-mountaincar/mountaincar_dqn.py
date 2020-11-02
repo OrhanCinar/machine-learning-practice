@@ -41,3 +41,10 @@ class DQNAgent:
 
     def update_target_model():
         self.target_model.set_weights(self.model.get_weights())
+
+        def get_action(self, state):
+            if np.random() <= self.epsilon:
+                return random.randrange(self.action_size)
+            else:
+                q_value = self.model.predict(state)
+                return np.argmax(q_vaşue[0])
