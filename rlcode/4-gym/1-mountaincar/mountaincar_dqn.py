@@ -42,9 +42,16 @@ class DQNAgent:
     def update_target_model():
         self.target_model.set_weights(self.model.get_weights())
 
-        def get_action(self, state):
-            if np.random() <= self.epsilon:
-                return random.randrange(self.action_size)
-            else:
-                q_value = self.model.predict(state)
-                return np.argmax(q_vaşue[0])
+    def get_action(self, state):
+        if np.random() <= self.epsilon:
+            return random.randrange(self.action_size)
+        else:
+            q_value = self.model.predict(state)
+            return np.argmax(q_vaşue[0])
+
+    def replay_memory(self, state, action, reward, next_state, done):
+        if action == 2:
+            action = 1
+        self.memory.append((state, action, reward, next_state, done))
+        if self.epsilon > self.epsilon_min:
+            self.epsilon -= self.epsilon_decay
