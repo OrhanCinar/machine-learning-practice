@@ -55,3 +55,27 @@ class DQNAgent:
         self.memory.append((state, action, reward, next_state, done))
         if self.epsilon > self.epsilon_min:
             self.epsilon -= self.epsilon_decay
+
+    def train_replay(self):
+        if len(self.memory) < self.train_start:
+            return
+        batch_size = min(self.batch_size, len(self.memory))
+        mini_batch = random.sample(self.memory, batch_size)
+
+        update_input = np.zeros((batch_size, self.state_size))
+        update_target = np.zeros((batch_size, self.action_size))
+
+        for i in range(batch_size):
+            state, action, reward, next_state, done = mini_batch[i]
+            target = self.model.predict(state)[0]
+
+            if done:
+                target[action] = reward
+            else:
+                target[action] = reward + self.discount_factor * \
+                    np.amax(self.target_model.predict(next_state)[0])
+            update_input[i] = state
+            update_target[i] = target
+
+        self.model.fit(update_input, update_target,
+                       batch_size=batch_size, epochs=1, verbose=0)
