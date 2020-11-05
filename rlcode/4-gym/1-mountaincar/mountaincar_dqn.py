@@ -79,3 +79,9 @@ class DQNAgent:
 
         self.model.fit(update_input, update_target,
                        batch_size=batch_size, epochs=1, verbose=0)
+
+    def load_model(self, name):
+        self.model.load_weights(name)
+
+    def save_model(self, name):
+        self.model.save_weights(name)
