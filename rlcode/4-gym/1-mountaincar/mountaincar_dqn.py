@@ -32,7 +32,8 @@ class DQNAgent:
         model = Sequential()
         model.add(Dense(32, input_dim=self.state_size,
                         activation='relu', kernel_initializer='he_uniform'))
-        model.add(Dense(16, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(16, activation='relu',
+                        kernel_initializer='he_uniform'))
         model.add(Dense(self.action_size, activation='linear',
                         kernel_initializer='he_uniform'))
         model.summary()
@@ -85,3 +86,51 @@ class DQNAgent:
 
     def save_model(self, name):
         self.model.save_weights(name)
+
+
+if __name__ == "__main__":
+    env = gym.make('MountainCar-v0')
+    state_size = env.observation_space.shape[0]
+    action_size = 2
+    agent = DQNAgent(state_size, action_size)
+    agent.load_model("./save_model/MountainCar_DQN.h5")
+    scores, episodes = [], []
+
+    for e in range(EPISODES):
+        done = False
+        score = 0
+        state = env.reset()
+        state = np.reshape(state, [1, state_size])
+        print(state)
+
+        fake_action = 0
+        action_count = 0
+
+        if action_count == 4:
+            action = agent.get_action(state)
+            action_count = 0
+
+            if action == 0:
+                fake_action = 0
+            elif action == 1:
+                fake_action = 3
+
+        next_state, reward, done, info = env.step(fake_action)
+        next_state = np.reshape(next_state, [1, state_size])
+
+        agent.replay_memory(state, fake_action, reward, next_state, done)
+        agent.train_replay()
+        score += reward
+        state = next_state
+
+        if done:
+            env.reset()
+            agent.update_target_model()
+
+            scores.append(score)
+            episodes.append(e)
+            print("episode:", e, "  score:", score, "  memory length:", len(agent.memory),
+                  "  epsilon:", agent.epsilon)
+
+    if 3 % 50 == 0:
+        agent.save_model("./save_model/MountainCar_DQN.h5")
