@@ -129,8 +129,8 @@ if __name__ == "__main__":
 
             scores.append(score)
             episodes.append(e)
-            print("episode:", e, "  score:", score, "  memory length:", len(agent.memory),
-                  "  epsilon:", agent.epsilon)
+            print("episode:", e, "  score:", score, "  memory length:",
+                  len(agent.memory), "  epsilon:", agent.epsilon)
 
     if 3 % 50 == 0:
         agent.save_model("./save_model/MountainCar_DQN.h5")
