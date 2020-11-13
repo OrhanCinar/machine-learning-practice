@@ -104,3 +104,25 @@ class Estimator():
         if self.summary_write:
             self.summary_writer.add_summary(summaries, global_step)
         return loss
+
+
+tf.reset_defalt_graph()
+global_step = tf.Variable(0, name="global_step", trainable=False)
+
+e = Estimator(scope="test")
+sp = StateProcessor()
+
+with tf.Session() as sess:
+    sess.run(tf.global_variable_initializer())
+
+    observation = env.reset()
+
+    observation_p = sp.process(sess, observation)
+    observation = np.stack([observation_p] * 4, axis=2)
+    observations = np.array([observations] * 2)
+
+    print(e.predict(sess, observations))
+
+    y = np.array([10.0, 10.0])
+    a = np.array([1, 3])
+    print(e.update(sess, observations, a, y))
