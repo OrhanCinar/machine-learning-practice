@@ -126,3 +126,32 @@ with tf.Session() as sess:
     y = np.array([10.0, 10.0])
     a = np.array([1, 3])
     print(e.update(sess, observations, a, y))
+
+
+class ModelParametersCopier():
+    def __init__(self, estimator1, estimator2):
+        e1_params = [t for t in tf.trainable_variables(
+        ) if t.name.startswith(estimator1.scope)]
+        e1_params = sorted(e1_params, key=lambda v: v.name)
+
+        e2_params = [t for t in tf.trainable_variables(
+        ) if t.name.startswith(estimator2.scope)]
+        e2_params = sorted(e2_params, key=lambda v: v.name)
+
+        self.update_ops = []
+        for e1_v, e2_v in zip(e1_params, e2_params):
+            op = e2_v.assign(e1_v)
+            self.update_ops.append(op)
+
+    def make(self, sess):
+        sess.run(self.update_ops)
+
+
+def make_eopsilon_greedy_policy(estimator, nA):
+    def policy_fn(sess, observation, epsilon):
+        A = np.ones(nA, dtype=float) * epsilon / nA
+        q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
+        best_action = np.argmax(q_values)
+        A[best_action] += (1.0 - epsilon)
+        return A
+    return policy_fn
