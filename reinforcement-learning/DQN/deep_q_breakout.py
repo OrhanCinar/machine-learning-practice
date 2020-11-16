@@ -334,3 +334,36 @@ def deep_q_learning(sess,
             episode_rewards=stats.episode_rewards[:i_episode+1])
 
     return stats
+
+
+tf.reset_default_graph()
+
+experiment_dir = os.path.abspath("./experiemtns/{}".format(env.spec.id))
+
+global_step = tf.Variable(0, name='global_step', trainable=False)
+
+q_estimator = Estimator(scope="q_estimator", summaries_dir=experiment_dir)
+target_estimator = Estimator(scope="target_q")
+
+state_processor = StateProcessor()
+
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    for t, stats in deep_q_learning(sess,
+                                    env,
+                                    q_estimator=q_estimator,
+                                    target_estimator=target_estimator,
+                                    state_processor=state_processor,
+                                    experiment_dir=experiment_dir,
+                                    num_episodes=10000,
+                                    replay_memory_size=500000,
+                                    replay_memory_init_size=50000,
+                                    update_target_estimator_every=10000,
+                                    epsilon_start=1.0,
+                                    epsilon_end=0.1,
+                                    epsilon_decay_steps=500000,
+                                    discount_factor=0.99,
+                                    batch_size=32):
+
+        print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
