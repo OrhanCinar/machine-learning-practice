@@ -30,3 +30,21 @@ featurizer = sklearn.pipeline.FeatureUnion([
 ])
 
 featurizer.fit(scaler.transform(observation_examples))
+
+
+class Estimator:
+    def __init__(self):
+        self.models = []
+        for _ in range(env.action_space.n):
+            model = SGDRegressor(learning_rate="constant")
+            model.partial_fit([self.featurize_state(env.reset())], [0])
+            seld.model.append(model)
+
+    def featurize_state(self, state):
+        scaled = scaler.transform([state])
+        featurized = featurizer.transform(scaled)
+        return featurized[0]
+
+    def predict(self, s, a=None):
+        features = self.featurize_state(s)
+        self.models[a].partial_fit([features], [y])
