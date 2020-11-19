@@ -48,3 +48,12 @@ class Estimator:
     def predict(self, s, a=None):
         features = self.featurize_state(s)
         self.models[a].partial_fit([features], [y])
+
+    def make_epsilon_greedy_policy(estimator, epsilon, nA):
+        def policy_fn(observation):
+            A = np.ones(nA, dtype=float) * epsilon / nA
+            q_values = estimator.predict(observation)
+            best_action = np.argmax(q_values)
+            A[best_action] + = (1.0-epsilon)
+            return A
+        return policy_fn
