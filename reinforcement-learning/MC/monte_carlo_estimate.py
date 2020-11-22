@@ -5,7 +5,6 @@ import sys
 import numpy as np
 import matplotlib
 import gym
-%matplotlib inline
 
 
 if "../" not in sys.path:
@@ -25,7 +24,7 @@ def mc_prediction(policy, env, num_episodes, discount_factor=1.0):
     V = defaultdict(float)
 
     for i_episode in range(1, num_episodes+1):
-        if i_episode % 1000 = 0:
+        if i_episode % 1000 == 0:
             print("\rEpisode {}/{}.".format(i_episode, num_episodes), end="")
             sys.stdout.flush()
 
@@ -53,7 +52,7 @@ def mc_prediction(policy, env, num_episodes, discount_factor=1.0):
 
 def sample_policy(observation):
     score, dealer_score, usable_ace = observation
-    return 0 if score > = 20 else 1
+    return 0 if score >= 20 else 1
 
 
 V_10k = mc_prediction(sample_policy, env, num_episodes=10000)
