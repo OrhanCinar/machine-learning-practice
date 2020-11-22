@@ -49,3 +49,15 @@ def mc_prediction(policy, env, num_episodes, discount_factor=1.0):
             returns_count[state] += 1.0
             V[state] = returns_sum[state] / returns_count[state]
     return V
+
+
+def sample_policy(observation):
+    score, dealer_score, usable_ace = observation
+    return 0 if score > = 20 else 1
+
+
+V_10k = mc_prediction(sample_policy, env, num_episodes=10000)
+plotting.plot_value_function(V_10k, title="10,000 Steps")
+
+V_500k = mc_prediction(sample_policy, env, num_episodes=500000)
+plotting.plot_value_function(V_500k, title="500,000 Steps")
