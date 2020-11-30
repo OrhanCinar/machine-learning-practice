@@ -44,9 +44,9 @@ class A2CAgent:
     def build_critic(self):
         critic = Sequential()
         critic.add(Dense(24, input_dim=self.state_size,
-                         actiavtion='relu', kernel_initiliazer='he_uniform'))
+                         activation='relu', kernel_initializer='he_uniform'))
         critic.add(Dense(self.value_size, input_dim=self.state_size,
-                         actiavtion='relu', kernel_initiliazer='he_uniform'))
+                         activation='relu', kernel_initializer='he_uniform'))
         critic.summary()
         critic.compile(loss='mse', optimizer=Adam(lr=self.critic_lr))
         return critic
