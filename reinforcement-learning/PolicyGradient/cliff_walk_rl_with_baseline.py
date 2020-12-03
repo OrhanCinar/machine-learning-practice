@@ -137,3 +137,17 @@ def reinforce(env, estimator_policy, estimator_value, num_episodes,
                 transition.state, advantage, transition.action)
 
     return stats
+
+
+tf.reset_default_graph()
+
+global_step = tf.Variable(0, name="global_step", trainable=False)
+policy_estimator = PolicyEstimator()
+value_estimator = ValueEstimator()
+
+with tf.Session() as sess:
+    sess.run(tf.initialize_all_variables())
+    stats = reinforce(env, policy_estimator, value_estimator,
+                      2000, discount_factor=1.0)
+
+plotting.plot_episode_stats(stats, smoothing_window=25)
