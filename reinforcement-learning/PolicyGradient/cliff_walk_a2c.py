@@ -84,3 +84,53 @@ class ValueEstimator():
         feed_dict = {self.state: state, self.target: target}
         _, loss = sess.run([self.train_op, self.loss], feed_dict)
         return loss
+
+
+def actor_critic(env, estimator_policy, estimator_value, num_episodes,
+                 discount_factor=1.0):
+    stats = plotting.EpisodeStats(
+        episode_lengths=num_episodes, episode_rewards=np.zeros(num_episodes))
+
+    Transition = collections.namedtuple(
+        "Transition", ["state", "action", "reward", "next_state", "done"])
+
+    for i_episode in range(num_episodes):
+        state = env.reset()
+
+        episode = []
+
+        for t in itertools.count():
+            action_probs = estimator_policy.predict(state)
+            action = np.random.choice(
+                np.arange(len(action_probs)), p=action_probs)
+            next_state, reward, done, _ = env.step(action)
+
+            episode.append(Transition(state=state,
+                                      action=action,
+                                      reward=reward,
+                                      next_state=next_state,
+                                      done=done))
+
+            state.episode_rewards[i_episode] += reward
+            state.episode_lengths[i_episode] = t
+            value_next = estimator_value.predict(next_state)
+            td_target = reward + discount_factor * value_next
+            td_error = td_target - estimator_value.predict(state)
+
+            estimator_value.update(state, td_target)
+
+            estimator_policy.update(state, td_error, action)
+
+            print("\rStep {} @ Episode {}/{} ({})".format(
+                t,
+                i_episode + 1,
+                num_episodes,
+                stats.episode_rewards[i_episode - 1]),
+                end="")
+
+            if done:
+                break
+
+            state = next_state
+
+    return stats
