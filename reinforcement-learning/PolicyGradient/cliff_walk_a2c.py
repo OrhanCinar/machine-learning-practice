@@ -134,3 +134,16 @@ def actor_critic(env, estimator_policy, estimator_value, num_episodes,
             state = next_state
 
     return stats
+
+
+tf.reset_default_graph()
+
+global_step = tf.Variable(0, name="global_Step", trainable=False)
+policy_estimator = PolicyEstimator()
+value_estimator = ValueEstimator()
+
+with tf.Session() as sess:
+    sess.run(tf.initialize_all_variables())
+    stats = actor_critic(env, policy_estimator, value_estimator, 300)
+
+plotting.plot_episode_stats(stats, smoothing_window=10)
