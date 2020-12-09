@@ -16,6 +16,7 @@ import gym
 if "../" not in sys.path:
     sys.path.append("../")
 
+# https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb
 
 matplotlib.style.use('ggplot')
 
@@ -42,3 +43,42 @@ def featurizer_state(state):
     scaled = scaler.transform([state])
     featurized = featurizer.transform(scaled)
     return featurized[0]
+
+
+class PolicyEstimator():
+
+    def __init__(self, learning_rate=0.01, scope="policy_estimator"):
+        with tf.variable_scope(scope):
+            self.state = tf.placeholer(tf.float32, [400], "state")
+            self.target = tf.placeholder(dtype=tf.float32, name="target")
+
+            self.mu = tf.contrib.layers.fully_connected(
+                inputs=tf.expand_dims(self.state, 0),
+                num_outputs=1,
+                activation_fn=None,
+                weights_initializer=tf.zeros.initializer
+            )
+            self.mu = tf.squeeze(self.mu)
+
+            self.sigma = tf.contrib.layers.
+            fully_connected(
+                inputs=tf.expand_dims(self.state, 0),
+                num_outputs=1,
+                activation_fn=None,
+                weights_initializer=tf.zeros_initializer
+            )
+
+            self.sigma = tf.squeeze(self.sigma)
+            self.sigma = tf.nn.softplus(self.sigma) + 1e-5
+            self.normal_dist = tf.contrib.distibutions.Normal(
+                self.mu, self.sigma)
+            self.action = self.normal_dist._sample_n(4)
+            self.action = tf.clip_by_value(
+                self.action, env.action_space.low[0], env.action_space.high[0])
+
+            self.loss = -self.normal_dist_prob(self.action) * self.target
+
+            self.optimizer = tf.train.AdamOptimizer(
+                learning_rate=learning_rate)
+            self.train_op = self.optimizer.minimize(
+                self.loss, global_Step=tf.contrib.framework.get_global_step())
