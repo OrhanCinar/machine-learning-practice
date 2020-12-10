@@ -82,3 +82,16 @@ class PolicyEstimator():
                 learning_rate=learning_rate)
             self.train_op = self.optimizer.minimize(
                 self.loss, global_Step=tf.contrib.framework.get_global_step())
+
+    def predict(self, state, sess=None):
+        sess = sess or tf.get_default_session()
+        state = featurize_state(state)
+        return sess.run(self.action, {self.state: state})
+
+    def update(self, state, target, action, sess=None):
+        sess = sess or tf.get_default_session()
+        state = featurize_state(state)
+        feed_dict = {self.state: state,
+                     self.target: target, self.action: action}
+        _, loss = sess.run([self.train_op, self.loss], feed_dict)
+        return loss
