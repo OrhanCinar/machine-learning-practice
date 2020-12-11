@@ -39,7 +39,7 @@ featurizer = sklearn.FeatureUnion([
 featurizer .fit(scaler.transform(observation_examples))
 
 
-def featurizer_state(state):
+def featurize_state(state):
     scaled = scaler.transform([state])
     featurized = featurizer.transform(scaled)
     return featurized[0]
@@ -95,3 +95,39 @@ class PolicyEstimator():
                      self.target: target, self.action: action}
         _, loss = sess.run([self.train_op, self.loss], feed_dict)
         return loss
+
+
+class ValueEstimator():
+
+    def __init__(self, learning_rate=0.1, scope="value_estimator"):
+        with tf.variable_scope(scope):
+            self.state = tf.placeholder(tf.float32, [400], "state")
+            self.target = tf.placeholder(tf.float32, "target")
+
+            self.output_layer = tf.contrib.fully_connected(
+                inputs=tf.expand_dims(self.state, 0),
+                num_outputs=1,
+                activation_fn=None,
+                weights_initializer=tf.zeros.initializer
+            )
+
+            self.value_estimator = tf.squeeze(self.output_layer)
+            self.loss = tf.squared_difference(self.value_estimate, self.target)
+
+            self.optimizer = tf.train.AdamOptimizer(
+                learning_Rate=learning_rate)
+            self.train_op = self.optimizer.minimize(
+                self.loss, global_step=tf.contrib.framework.get_global_step()
+            )
+
+        def predict(self, state, sess=None):
+            sess = sess or tf.get_default_session()
+            state = featurize_state(state)
+            return sess.run(self.value_estimate, {self.state: state})
+
+        def update(self, state, target, action, sess=None):
+            sess = sess or tf.get_default_session()
+            state = featurize_state(state)
+            feed_dict = {self.state: state, self.target: target}
+            _, loss = sess.run([self.train_op, self.loss], feed_dict)
+            return loss
