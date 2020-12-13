@@ -171,10 +171,26 @@ def actor_critic(env, estimator_policy, estimator_value, num_episodes,
 
         estimator_policy.update(state, td_error, action)
         print("\rStep {} @ Episode {}/{} ({})".format(
-            t, i_episode + 1, num_episodes, stats.episode_rewards[i_episode - 1]), end="")
+            t, i_episode + 1, num_episodes,
+            stats.episode_rewards[i_episode - 1]), end="")
 
         if done:
             break
 
         state = next_state
+
     return stats
+
+
+tf.reset_default_graph()
+
+global_step = tf.Variable(0, name="global_step", trainable=False)
+policy_estimator = PolicyEstimator(learning_rate=0.001)
+value_estimator = ValueEstimator(learning_rate=0.1)
+
+with tf.Session() as sess:
+    sess.run(tf.initialize_all_variables())
+    stats = actor_critic(env, policy_estimator,
+                         value_estimator, 50, discount_factor=0.95)
+
+plotting.plot_episode_stats(stats, smoothing_window=10)
