@@ -34,7 +34,7 @@ class PolicyEstimator():
                 weights_initializer=tf.zeros_initializer)
 
             self.action_probs = tf.squeeze(tf.nn.softmax(self.output_layer))
-            self.picked_action_prob = tf.gathet(self.action_probs, self.action)
+            self.picked_action_prob = tf.gather(self.action_probs, self.action)
 
             self.loss = -tf.log(self.picked_action_prob) * self.target
 
