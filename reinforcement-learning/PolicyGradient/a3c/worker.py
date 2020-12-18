@@ -45,3 +45,41 @@ def make_train_op(local_estimator, global_estimator):
     return global_estimator.optimizer.apply_gradients(
         local_global_grads_and_vars,
         global_step=tf.contrib.framework.get_global_step())
+
+
+class Worker(object):
+
+    def __init__(self, name, env, policy_net, value_net, global_counter,
+                 discount_factor=0.99, summary_writer=None,
+                 max_global_step=None):
+        self.name = name
+        self.discount_factor = discount_factor
+        self.max_global_step = max_global_step
+        self.max_global_step = tf.contrib.framework.get_global_step()
+        self.global_policy_net = policy_net
+        self.global_value_net = value_net
+        self.global_counter = global_counter
+        self.local_counter = itertools.count()
+        self.sp = StateProcessor()
+        self.summary_writer = summary_writer
+        self.env = env
+
+        with tf.variable_scope(name):
+            self.policy_net = PolicyEstimator(policy_net.num_outputs)
+            self.value_net = ValueEstimator(reuse=True)
+
+        self.copy_params_op = make_copy_params_op(
+            tf.contrib.slim.get_variables(
+                scope="global",
+                collection=tf.GraphKeys.TRAINABLE_VARIABLES)
+            tf.contrib.slim.get_variables(
+                scope=self.name+'/',
+                ollection=tf.GraphKeys.TRAINABLE_VARIABLES)
+        )
+
+        self.vnet_train_op = make_copy_params_op(
+            self.value_net, self.global_value_net)
+        self.pnet_train_op = make_copy_params_op(
+            self.policy_net, self.global_policy_net)
+
+        self.state = None
