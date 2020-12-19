@@ -51,11 +51,11 @@ class Worker(object):
 
     def __init__(self, name, env, policy_net, value_net, global_counter,
                  discount_factor=0.99, summary_writer=None,
-                 max_global_step=None):
+                 max_global_steps=None):
         self.name = name
         self.discount_factor = discount_factor
-        self.max_global_step = max_global_step
-        self.max_global_step = tf.contrib.framework.get_global_step()
+        self.max_global_steps = max_global_step
+        self.global_step = tf.contrib.framework.get_global_step()
         self.global_policy_net = policy_net
         self.global_value_net = value_net
         self.global_counter = global_counter
@@ -83,3 +83,27 @@ class Worker(object):
             self.policy_net, self.global_policy_net)
 
         self.state = None
+
+    def run(self, sess, coord, t_max):
+        with sess.as_default(), sess.graph.as_Default():
+            self.state = atari_helpers.atari_make_initial_state(
+                self.sp.process(self.env.reset()))
+            try:
+                while not coord.should_stop():
+                    sess.run(self.copy_params_op)
+
+                    transitions, local_t, global_t = self.run_n_steps(
+                        t_max, sess)
+
+                    if self.max_global_steps is not None
+                    and global_t >= self.max_global_steps:
+                        tf.logging.info(
+                            "Reached global step {}. Stopping."
+                            .format(global_t))
+                        coord.request_stop()
+                        return
+
+                    self.update(transitions, sess)
+
+            except tf.errors.CancelledError:
+                return
