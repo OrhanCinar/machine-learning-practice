@@ -107,3 +107,13 @@ class Worker(object):
 
             except tf.errors.CancelledError:
                 return
+
+    def _policy_net_predict(self, state, sess):
+        feed_dic = {self.policy_net.states: [states]}
+        preds = sess.run(self.policy_net.predictions, feed_dic)
+        return preds["probs"][0]
+
+    def _value_net_predict(self, state, sess):
+        feed_dict = {self.value_net.states: [state]}
+        preds = sess.run(self.value_net.predictions, feed_dict)
+        return preds["logits"][0]
