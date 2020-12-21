@@ -117,3 +117,36 @@ class Worker(object):
         feed_dict = {self.value_net.states: [state]}
         preds = sess.run(self.value_net.predictions, feed_dict)
         return preds["logits"][0]
+
+    def run_n_steps(self, n, sess):
+        transitions = []
+
+        for _ in range(n):
+            action_probes = self._policy_net_predict(self.state, sess)
+            action = np.random.choice(
+                np.arange(len(action_probs)), p=action_probs)
+            next_state, reward, done, _ = self.env.step(action)
+            next_state = atari_helpers.atari_make_next_state(
+                self.state, self.sp.process(next_state))
+
+            transitions.append(Transition(s
+                                          tate=self.state,
+                                          action=action,
+                                          reward=reward,
+                                          next_state=next_state,
+                                          done=done))
+
+            local_t = next(self.local_counter)
+            global_t = next(self.global_counter)
+
+            if local_t % 100 == 0:
+                tf.logging.info("{}: local step {}, global step {}". format(
+                    self.name, local_t, global_t))
+
+            if done:
+                self.state = atari_helpers.atari_make_initial_state(
+                    self.sp.process(self.env.reset()))
+                break
+            else:
+                self.state = next_state
+        return transitions, local_t, global_t
