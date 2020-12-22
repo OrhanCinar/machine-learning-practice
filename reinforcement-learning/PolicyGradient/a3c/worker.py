@@ -150,3 +150,50 @@ class Worker(object):
             else:
                 self.state = next_state
         return transitions, local_t, global_t
+
+    def update(self, transitions, sess):
+
+        reward = 0.0
+
+        if not transitions[::-1]:
+            reward = self._value_net_predict(transitions[-1].next_state, sess)
+
+        states = []
+        policy_targets = []
+        value_targets = []
+        actions = []
+
+        for transition in transitions[::-1]:
+            reward = transition.reward + self.discount_factor * reward
+            policy_target = (
+                reward - self._value_net_predict(transition.state, sess))
+            states.append(transition.state)
+            actions.append(transition.action)
+            policy_targets.append(policy_target)
+            value_targets.append(reward)
+
+        feed_dict = {
+            self.policy_net.states: np.array(states),
+            self.policy_net.targets: policy_targets,
+            self.policy_net.actions: actions,
+            self.value_net.states: np.array(states),
+            self.value_net.targets: value_targets
+        }
+
+        global_step, pnet_loss, vnet_loss, _, _, pnet_summaries,
+        vnet_summaries = sess.run([
+            self.global_step,
+            self.policy_net.loss,
+            self.value_net.loss,
+            self.pnet_train_op,
+            self.vnet_train_op,
+            self.policy_net.summaries,
+            self.value_net.summaries
+        ], feed_dict)
+
+        if self.summary_writer is not None:
+            self.summary_writer.add_summary(pnet_summaries, global_step)
+            self.summary_writer.add_summary(vnet_summaries, global_step)
+            self.summary_writer.flush()
+
+        return pnet_loss, vnet_loss, pnet_summaries, vnet_summaries
