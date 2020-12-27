@@ -89,7 +89,15 @@ class PolicyMonitor(object):
             if self.saver is not None:
                 self.saver.save(sess, self.checkpoint_path)
 
-            tf.logging.info("Eval results at step {}: total_reward {}, episode_length {}".format(
+            tf.logging.info("Eval results at step {}: total_reward {},episode_length {}".format(
                 global_step, total_reward, episode_length))
 
             return total_reward, episode_length
+
+    def continous_eval(self, eval_every, sess, coord):
+        try:
+            while not coord.should_stop():
+                self.eval_once(sess)
+                time.sleep(eval_every)
+        except tf.errors.CanceledError:
+            return
