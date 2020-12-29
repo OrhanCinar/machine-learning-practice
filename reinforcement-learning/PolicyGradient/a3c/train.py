@@ -69,3 +69,12 @@ if FLAGS.parallelism:
 
 MODEL_DIR = FLAGS.model_dir
 CHECKPOINT_DIR = os.path.join(MODEL_DIR, "checkpoints")
+
+
+if FLAGS.reset:
+    shutil.rmtree(MODEL_DIR, ignore_errors=True)
+
+if not os.path.exists(CHECKPOINT_DIR):
+    os.makedirs(CHECKPOINT_DIR)
+
+summary_writer = tf.summary.FileWriter(os.path.join(MODEL_DIR, "train"))
