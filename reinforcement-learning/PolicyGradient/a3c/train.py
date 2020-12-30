@@ -1,4 +1,5 @@
 
+from tensorboard.summary._tf import summary
 from worker import Worker
 from policy_monitor import PolicyMonitor
 from estimators import ValueEstimator, PolicyEstimator
@@ -78,3 +79,41 @@ if not os.path.exists(CHECKPOINT_DIR):
     os.makedirs(CHECKPOINT_DIR)
 
 summary_writer = tf.summary.FileWriter(os.path.join(MODEL_DIR, "train"))
+
+with tf.device("/cpu/0"):
+
+    global_step = tf.Variable(0, name="globa_step", trainable=False)
+
+    with tf.variable_scope("global") as vs:
+        policy_net = PolicyEstimator(num_outputs=len(VALID_ACTIONS))
+        value_net = ValueEstimator(reuse=True)
+
+    global_counter = itertools.count()
+
+    workers = []
+
+    for worker_id in range(NUM_WORKERS):
+        worker_summary_writer = None
+        if worker_id == 0:
+            worker_summary_writer = summary_writer
+
+        worker = Worker(
+            name="worker_{}".format(worker_id),
+            env=make_env(),
+            policy_net=policy_net,
+            value_net=value_net,
+            global_counter=global_counter,
+            discount_factor=0.99,
+            summary_writer=worker_summary_writer,
+            max_global_steps=FLAGS.max_global_steps
+        )
+        workers.append(worker)
+
+    saver = tf.train.Saver(keep_checkpoint_every_n_hours=2.0, max_to_keep=10)
+
+    pe = PolicyMonitor(
+        env=make_env(wrap=False),
+        policy_net=policy_net,
+        summary_writer=summary_writer,
+        saver=saver
+    )
