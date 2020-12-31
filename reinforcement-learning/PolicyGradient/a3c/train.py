@@ -117,3 +117,28 @@ with tf.device("/cpu/0"):
         summary_writer=summary_writer,
         saver=saver
     )
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    coord = tf.train.Coordinator()
+
+    latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINT_DIR)
+
+    if latest_checkpoint:
+        print("Loading model checkpoint: {}".format(latest_checkpoint))
+        saver.restore(sess, latest_checkpoint)
+
+    worker_threads = []
+
+    for worker in workers:
+        def worker_fn(worder=worker): return worker.run(
+            sess, coord, FLAGS.t_max)
+        t = threading.Thread(target=worker_fn)
+        t.start()
+        worker_threads.append(t)
+
+    monitor_thread = threading.Thread(
+        target=lambda: pe.continous_eval(FLAGS.eval_every, sess, coord))
+    monitor_thread.start()
+
+    coord.join(worker_threads)
